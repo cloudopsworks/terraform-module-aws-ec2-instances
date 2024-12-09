@@ -1,0 +1,35 @@
+name: Terraform Transit Gateway Module
+#logo: logo/logo.jpg
+
+license: "APACHE2"
+
+copyrights:
+  - name: "Cloud Ops Works LLC"
+    url: "https://cloudops.works"
+    year: "2024"
+
+github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+
+description: |-
+  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+
+# Introduction to the project
+#introduction: |-
+#  This is an introduction.
+
+# How to use this project
+#usage: |-
+
+# Example usage
+#examples: |-
+
+# How to get started quickly
+#quickstart: |-
+
+include:
+  - "docs/targets.md"
+  - "docs/terraform.md"
+
+contributors:
+  - name: "Cristian Beraha"
+    github: "berahac"
