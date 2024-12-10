@@ -4,23 +4,7 @@
 #            Distributed Under Apache v2.0 License
 #
 
-locals {
-  is_t_instance_type = replace(var.instance.type, "/^t(2|3|3a|4g){1}\\..*$/", "1") == "1" ? true : false
-  name               = var.name_prefix != "" ? "${var.instance.name_prefix}-${var.instance.name}" : var.name
-
-}
-
-data "aws_ami" "this" {
-  count       = try(var.instance.create, true) && try(var.instance.ami.name, "") != "" ? 1 : 0
-  most_recent = try(var.instance.ami.most_recent, true)
-  owners      = try(var.instance.ami.owners, ["self"])
-  filter {
-    name   = "name"
-    values = [var.instance.ami.name]
-  }
-}
-
-resource "aws_instance" "this" {
+resource "aws_spot_instance_request" "spot" {
   count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) ? 1 : 0
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
@@ -28,10 +12,10 @@ resource "aws_instance" "this" {
   user_data                   = try(var.instance.user_data, null)
   user_data_base64            = try(var.instance.user_data_base64, null)
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
-  key_name                    = try(var.instance.key_pair.name, null)
+  key_name                    = try(var.instance.key_name, null)
   monitoring                  = try(var.instance.monitoring, null)
   get_password_data           = try(var.instance.get_password_data, null)
-  iam_instance_profile        = try(var.iam.create, true) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
+  iam_instance_profile        = try(var.instance.iam.create, false) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
   dynamic "cpu_options" {
     for_each = length(try(var.instance.cpu_options, {})) > 0 ? [var.instance.cpu_options] : []
     content {
@@ -49,6 +33,16 @@ resource "aws_instance" "this" {
   ipv6_address_count          = try(var.instance.vpc.ipv6_address_count, null)
   ipv6_addresses              = try(var.instance.vpc.ipv6_addresses, null)
   ebs_optimized               = try(var.instance.ebs.ebs_optimized, null)
+  # SPOT
+  spot_price                     = try(var.instance.spot.price, null)
+  spot_type                      = try(var.instance.spot.type, null)
+  wait_for_fulfillment           = try(var.instance.spot.wait_for_fulfillment, null)
+  launch_group                   = try(var.instance.spot.launch_group, null)
+  block_duration_minutes         = try(var.instance.spot.block_duration_minutes, null)
+  instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
+  valid_until                    = try(var.instance.spot.valid_until, null)
+  valid_from                     = try(var.instance.spot.valid_from, null)
+  # SPOT
   dynamic "root_block_device" {
     for_each = try(var.instance.root_block_device, [])
     content {
@@ -77,14 +71,6 @@ resource "aws_instance" "this" {
       tags                  = try(ebs_block_device.value.tags, null)
     }
   }
-  dynamic "ephemeral_block_device" {
-    for_each = try(var.instance.ephemeral_block_device, [])
-    content {
-      device_name  = ephemeral_block_device.value.device_name
-      no_device    = try(ephemeral_block_device.value.no_device, null)
-      virtual_name = try(ephemeral_block_device.value.virtual_name, null)
-    }
-  }
   dynamic "metadata_options" {
     for_each = length(try(var.instance.metadata_options, {})) > 0 ? [var.instance.metadata_options] : []
     content {
@@ -100,6 +86,14 @@ resource "aws_instance" "this" {
       device_index          = network_interface.value.device_index
       network_interface_id  = try(network_interface.value.network_interface_id, null)
       delete_on_termination = try(network_interface.value.delete_on_termination, true)
+    }
+  }
+  dynamic "ephemeral_block_device" {
+    for_each = try(var.instance.ephemeral_block_device, [])
+    content {
+      device_name  = ephemeral_block_device.value.device_name
+      no_device    = try(ephemeral_block_device.value.no_device, null)
+      virtual_name = try(ephemeral_block_device.value.virtual_name, null)
     }
   }
   dynamic "private_dns_name_options" {
@@ -141,7 +135,7 @@ resource "aws_instance" "this" {
   instance_initiated_shutdown_behavior = try(var.instance.instance_initiated_shutdown_behavior, null)
   placement_group                      = try(var.instance.placement_group, null)
   tenancy                              = try(var.instance.tenancy, null)
-  host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
+  host_id                              = try(var.instance.host_id, null)
   tags = merge(
     local.all_tags,
     try(var.instance.extra_tags, {}),
@@ -158,7 +152,6 @@ resource "aws_instance" "this" {
   )
   timeouts {
     create = try(var.timeouts.create, null)
-    update = try(var.timeouts.update, null)
     delete = try(var.timeouts.delete, null)
   }
 }

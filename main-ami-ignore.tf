@@ -4,23 +4,7 @@
 #            Distributed Under Apache v2.0 License
 #
 
-locals {
-  is_t_instance_type = replace(var.instance.type, "/^t(2|3|3a|4g){1}\\..*$/", "1") == "1" ? true : false
-  name               = var.name_prefix != "" ? "${var.instance.name_prefix}-${var.instance.name}" : var.name
-
-}
-
-data "aws_ami" "this" {
-  count       = try(var.instance.create, true) && try(var.instance.ami.name, "") != "" ? 1 : 0
-  most_recent = try(var.instance.ami.most_recent, true)
-  owners      = try(var.instance.ami.owners, ["self"])
-  filter {
-    name   = "name"
-    values = [var.instance.ami.name]
-  }
-}
-
-resource "aws_instance" "this" {
+resource "aws_instance" "ami_ignore" {
   count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) ? 1 : 0
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
@@ -28,10 +12,10 @@ resource "aws_instance" "this" {
   user_data                   = try(var.instance.user_data, null)
   user_data_base64            = try(var.instance.user_data_base64, null)
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
-  key_name                    = try(var.instance.key_pair.name, null)
+  key_name                    = try(var.instance.key_name, null)
   monitoring                  = try(var.instance.monitoring, null)
   get_password_data           = try(var.instance.get_password_data, null)
-  iam_instance_profile        = try(var.iam.create, true) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
+  iam_instance_profile        = try(var.instance.iam.create, false) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
   dynamic "cpu_options" {
     for_each = length(try(var.instance.cpu_options, {})) > 0 ? [var.instance.cpu_options] : []
     content {
@@ -160,5 +144,8 @@ resource "aws_instance" "this" {
     create = try(var.timeouts.create, null)
     update = try(var.timeouts.update, null)
     delete = try(var.timeouts.delete, null)
+  }
+  lifecycle {
+    ignore_changes = [ami]
   }
 }
