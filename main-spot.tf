@@ -12,7 +12,7 @@ resource "aws_spot_instance_request" "spot" {
   user_data                   = try(var.instance.user_data, null)
   user_data_base64            = try(var.instance.user_data_base64, null)
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
-  key_name                    = try(var.instance.key_name, null)
+  key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)
   get_password_data           = try(var.instance.get_password_data, null)
   iam_instance_profile        = try(var.instance.iam.create, false) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
