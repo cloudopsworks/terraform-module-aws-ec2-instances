@@ -58,18 +58,6 @@ variable "instance" {
   default     = {}
 }
 
-variable "placement" {
-  description = "The placement of the EC2 Instance"
-  type        = any
-  default     = {}
-}
-
-variable "dedicated" {
-  description = "The dedicated of the EC2 Instance"
-  type        = any
-  default     = {}
-}
-
 variable "timeouts" {
   description = "The timeouts of the EC2 Instance"
   type        = any
