@@ -25,7 +25,7 @@ resource "aws_instance" "ami_ignore" {
     }
   }
   availability_zone           = try(var.instance.availability_zone, null)
-  vpc_security_group_ids      = try(var.instance.vpc.security_group_ids, null)
+  vpc_security_group_ids      = try(var.instance.security_group.create, false) ? concat([aws_security_group.this[0].id], try(var.instance.vpc.security_group_ids, [])) : try(var.instance.vpc.security_group_ids, null)
   associate_public_ip_address = try(var.instance.vpc.associate_public_ip_address, null)
   subnet_id                   = try(var.instance.vpc.subnet_id, null)
   private_ip                  = try(var.instance.vpc.private_ip, null)

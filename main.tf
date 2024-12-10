@@ -6,7 +6,7 @@
 
 locals {
   is_t_instance_type = replace(var.instance.type, "/^t(2|3|3a|4g){1}\\..*$/", "1") == "1" ? true : false
-  name               = var.name_prefix != "" ? "${var.instance.name_prefix}-${var.instance.name}" : var.name
+  name               = var.name_prefix != "" ? "${var.name_prefix}-${local.system_name}" : var.name
 
 }
 
@@ -41,7 +41,7 @@ resource "aws_instance" "this" {
     }
   }
   availability_zone           = try(var.instance.availability_zone, null)
-  vpc_security_group_ids      = try(var.instance.vpc.security_group_ids, null)
+  vpc_security_group_ids      = try(var.instance.security_group.create, false) ? concat([aws_security_group.this[0].id], try(var.instance.vpc.security_group_ids, [])) : try(var.instance.vpc.security_group_ids, null)
   associate_public_ip_address = try(var.instance.vpc.associate_public_ip_address, null)
   subnet_id                   = try(var.instance.vpc.subnet_id, null)
   private_ip                  = try(var.instance.vpc.private_ip, null)
