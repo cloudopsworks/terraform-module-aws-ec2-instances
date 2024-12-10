@@ -11,5 +11,10 @@ resource "aws_ec2_host" "this" {
   instance_type     = try(var.instance.dedicated_host.instance_family, "") == "" ? var.instance.type : null
   host_recovery     = try(var.instance.dedicated_host.host_recovery, null)
   auto_placement    = try(var.instance.dedicated_host.auto_placement, null)
-  tags              = local.all_tags
+  tags = merge(
+    local.all_tags,
+    {
+      Name = local.name
+    }
+  )
 }
