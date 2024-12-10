@@ -39,7 +39,7 @@ resource "aws_iam_role" "this" {
 
 resource "aws_iam_role_policy_attachment" "this" {
   for_each = {
-    for k, v in var.iam.role_policies : k => v if try(var.instance.create, true) && try(var.iam.create, true)
+    for k, v in try(var.iam.role_policies, {}) : k => v if try(var.instance.create, true) && try(var.iam.create, true)
   }
   policy_arn = each.value
   role       = aws_iam_role.this[0].name
