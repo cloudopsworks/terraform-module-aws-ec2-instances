@@ -32,7 +32,7 @@ resource "aws_iam_role" "this" {
   assume_role_policy    = data.aws_iam_policy_document.assume_role[count.index].json
   permissions_boundary  = try(var.iam.permissions_boundary, null)
   force_detach_policies = true
-  tags = merge(local.all_tags, var.iam.extra_tags, {
+  tags = merge(local.all_tags, try(var.iam.extra_tags, {}), {
     Name = local.iam_role_name
   })
 }
@@ -50,7 +50,7 @@ resource "aws_iam_instance_profile" "this" {
   role  = aws_iam_role.this[0].name
   name  = local.iam_role_name
   path  = try(var.iam.path, null)
-  tags = merge(local.all_tags, var.iam.extra_tags, {
+  tags = merge(local.all_tags, try(var.iam.extra_tags, {}), {
     Name = local.iam_role_name
   })
   lifecycle {
