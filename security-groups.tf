@@ -32,7 +32,7 @@ resource "aws_security_group" "this" {
 
 resource "aws_security_group_rule" "this" {
   for_each = {
-    for k, v in try(var.instance.security_group.ingress_rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false)
+    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false)
   }
   security_group_id        = aws_security_group.this[0].id
   description              = try(each.value.description, "Rule for ${local.name} access")
