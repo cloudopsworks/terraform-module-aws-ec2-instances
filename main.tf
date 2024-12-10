@@ -31,7 +31,7 @@ resource "aws_instance" "this" {
   key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)
   get_password_data           = try(var.instance.get_password_data, null)
-  iam_instance_profile        = try(var.iam.create, true) ? aws_iam_instance_profile.this[0].name : try(var.instance.iam.instance_profile, null)
+  iam_instance_profile        = try(var.iam.create, true) ? aws_iam_instance_profile.this[0].name : try(var.iam.instance_profile, null)
   dynamic "cpu_options" {
     for_each = length(try(var.instance.cpu_options, {})) > 0 ? [var.instance.cpu_options] : []
     content {
