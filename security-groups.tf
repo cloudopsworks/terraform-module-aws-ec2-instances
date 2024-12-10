@@ -35,6 +35,7 @@ resource "aws_security_group_rule" "this" {
     for k, v in try(var.instance.security_group.ingress_rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false)
   }
   security_group_id        = aws_security_group.this[0].id
+  description              = try(each.value.description, "Rule for ${local.name} access")
   from_port                = try(each.value.from_port, 0)
   protocol                 = try(each.value.protocol, "-1")
   to_port                  = try(each.value.to_port, 0)
