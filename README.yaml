@@ -1,4 +1,4 @@
-name: Terraform Transit Gateway Module
+name: Terraform AWS EC2 Instance
 #logo: logo/logo.jpg
 
 license: "APACHE2"
@@ -8,23 +8,76 @@ copyrights:
     url: "https://cloudops.works"
     year: "2024"
 
-github_repo: cloudopsworks/terraform-module-aws-vpc-setup
+github_repo: cloudopsworks/terraform-module-aws-ec2-instances
 
 description: |-
-  VPC Module for setting up transit gateway with ResourceAccessMananger support.
+  This Terraform module simplifies provisioning and managing Amazon EC2 instances in AWS. 
+  It allows you to define configurations such as instance types, VPC subnets, security groups, 
+  and more. By encapsulating all essential settings and optional features, the module helps 
+  ensure that your EC2 infrastructure remains consistent, reproducible, and version-controlled.
 
 # Introduction to the project
-#introduction: |-
-#  This is an introduction.
+introduction: |-
+  The Terraform AWS EC2 Instance module is designed to provide an easy way to manage and 
+  scale virtual machines within the AWS ecosystem. Whether you need to provision single or 
+  multiple EC2 instances, this module offers an opinionated yet flexible approach that 
+  streamlines the process of creating, configuring, and maintaining your infrastructure.
+  
+  By leveraging the features of Terraform, you can control changes to your EC2 instances 
+  through code, facilitate audit trails, and eliminate the need for manual configuration. 
+  This module is a specific solution aimed at making it straightforward for teams to define 
+  and deploy EC2-based workloads in AWS with minimal overhead.
 
 # How to use this project
-#usage: |-
+usage: |-
+  To incorporate this module, reference it with Terragrunt while following the structure of the .boilerplate templates in the "develop" branch of this repository.
+  
+  Basic steps to use the module:
+  1. Install Terraform (v1.0 or higher) and Terragrunt.
+  2. Create or update your Terragrunt configuration files using the .boilerplate patterns.
+  3. Provide required variables (AWS region, AMI IDs, instance types, etc.).
+  4. Run terragrunt init to initialize your working directory.
+  5. Run terragrunt plan to view resource changes.
+  6. Run terragrunt apply to create the resources.
+  
+  Example of a Terragrunt configuration referencing this module (terragrunt.hcl):
+  ```hcl
+  terraform {
+    source = "git::https://github.com/cloudopsworks/terraform-module-aws-ec2-instances.git//?ref=develop"
+  }
+  
+  inputs = {
+    aws_region     = "us-east-1"
+    instance_count = 2
+    instance_type  = "t2.micro"
+    key_name       = "my-keypair"
+    # Additional optional variables based on your environment structure
+    # ...
+  }
+  ```
 
 # Example usage
-#examples: |-
+examples: |-
+  Here are sample use cases you can adapt in the .boilerplate files on the "develop" branch:
+  
+  1. Single Development Instance
+     - Combine this module with minimal settings to spin up a small instance for dev/testing.
+  
+  2. Multi-Instance Setup
+     - Leverage the instance_count variable to manage auto-scaling scenarios or replicate standardized instances in multiple environments.
+  
+  3. Private Subnet Deployment
+     - Apply advanced networking configurations using Terragrunt's environment-based structure, automatically enforcing best practices established in boilerplate templates.
+  
+  For more Terragrunt-based examples and structural hints, see the .boilerplate directory in the "develop" branch.
 
 # How to get started quickly
-#quickstart: |-
+quickstart: |-
+  1. Clone or fork the repository to review the .boilerplate templates under the "develop" branch.
+  2. Adapt the relevant Terragrunt configuration files for your own environment by referencing this module.
+  3. Initialize your workspace using terragrunt init.
+  4. Review proposed infrastructure changes by running terragrunt plan.
+  5. Finally, configure and deploy your EC2 instances with terragrunt apply.
 
 include:
   - "docs/targets.md"
