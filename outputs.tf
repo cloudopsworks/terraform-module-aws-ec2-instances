@@ -25,12 +25,12 @@ output "key_pair_name" {
 }
 
 output "key_pair_public_key" {
-  value     = try(var.instance.key_pair.create, false) ? tls_private_key[0].this.public_key_openssh : ""
+  value     = try(var.instance.key_pair.create, false) ? tls_private_key.this[0].public_key_openssh : ""
   sensitive = true
 }
 
 output "key_pair_ssh_private_key" {
-  value     = try(var.instance.key_pair.create, false) ? tls_private_key[0].this.private_key_openssh : ""
+  value     = try(var.instance.key_pair.create, false) ? tls_private_key.this[0].private_key_openssh : ""
   sensitive = true
 }
 
