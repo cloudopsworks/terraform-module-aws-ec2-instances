@@ -5,7 +5,7 @@
 #
 
 resource "aws_spot_instance_request" "spot" {
-  count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) ? 1 : 0
+  count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) ? 1 : 0
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
   hibernation                 = try(var.instance.hibernation, null)
