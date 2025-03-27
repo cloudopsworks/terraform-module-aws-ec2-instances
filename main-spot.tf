@@ -138,6 +138,7 @@ resource "aws_spot_instance_request" "spot" {
   host_id                              = try(var.instance.host_id, null)
   tags = merge(
     local.all_tags,
+    local.backup_tags,
     try(var.instance.extra_tags, {}),
     {
       Name = local.name
@@ -145,6 +146,7 @@ resource "aws_spot_instance_request" "spot" {
   )
   volume_tags = merge(
     local.all_tags,
+    local.backup_tags,
     try(var.instance.volume_extra_tags, {}),
     {
       Name = local.name

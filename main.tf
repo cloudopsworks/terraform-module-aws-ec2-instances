@@ -144,6 +144,7 @@ resource "aws_instance" "this" {
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
   tags = merge(
     local.all_tags,
+    local.backup_tags,
     try(var.instance.extra_tags, {}),
     {
       Name = local.name
@@ -151,6 +152,7 @@ resource "aws_instance" "this" {
   )
   volume_tags = merge(
     local.all_tags,
+    local.backup_tags,
     try(var.instance.volume_extra_tags, {}),
     {
       Name = local.name
