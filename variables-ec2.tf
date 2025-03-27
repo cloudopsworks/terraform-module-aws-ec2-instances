@@ -51,7 +51,11 @@ variable "name_prefix" {
 #     ipv6_addresses: ["ipv6-address"] # defaults to null
 #   ebs:
 #     ebs_optimized: true | false # defaults to null
-
+#   backup:
+#     enable: true | false # defaults to false
+#     only_tag: true | false # defaults to true
+#     schedule_tag: hourly | daily | weekly | monthly # defaults to daily
+#     backup_vault_name: "backup-vault-name" # Required only_tag is false
 variable "instance" {
   description = "The instance type to use for the EC2 Instance"
   type        = any
