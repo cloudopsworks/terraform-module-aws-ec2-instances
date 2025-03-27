@@ -52,7 +52,7 @@ variable "name_prefix" {
 #   ebs:
 #     ebs_optimized: true | false # defaults to null
 #   backup:
-#     enable: true | false # defaults to false
+#     enabled: true | false # defaults to false
 #     only_tag: true | false # defaults to true
 #     schedule_tag: hourly | daily | weekly | monthly # defaults to daily
 #     backup_vault_name: "backup-vault-name" # Required only_tag is false
