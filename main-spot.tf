@@ -136,21 +136,10 @@ resource "aws_spot_instance_request" "spot" {
   placement_group                      = try(var.instance.placement_group, null)
   tenancy                              = try(var.instance.tenancy, null)
   host_id                              = try(var.instance.host_id, null)
-  tags = merge(
-    local.all_tags,
-    local.backup_tags,
-    try(var.instance.extra_tags, {}),
-    {
-      Name = local.name
-    }
-  )
+  tags = local.instance_tags
   volume_tags = merge(
-    local.all_tags,
-    local.backup_tags,
-    try(var.instance.volume_extra_tags, {}),
-    {
-      Name = local.name
-    }
+    local.instance_tags,
+    try(var.instance.volume_extra_tags, {})
   )
   timeouts {
     create = try(var.timeouts.create, null)
@@ -160,7 +149,7 @@ resource "aws_spot_instance_request" "spot" {
 
 resource "aws_ec2_tag" "spot_instance_tags" {
   for_each = {
-    for k, v in local.all_tags : k => v
+    for k, v in local.instance_tags : k => v
     if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false)
   }
   resource_id = aws_spot_instance_request.spot[0].spot_instance_id
