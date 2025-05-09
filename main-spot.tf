@@ -35,8 +35,8 @@ resource "aws_spot_instance_request" "spot" {
   ebs_optimized               = try(var.instance.ebs.ebs_optimized, null)
   # SPOT
   spot_price                     = try(var.instance.spot.price, null)
-  spot_type                      = try(var.instance.spot.type, null)
-  wait_for_fulfillment           = try(var.instance.spot.wait_for_fulfillment, null)
+  spot_type                      = try(var.instance.spot.type, "one-time")
+  wait_for_fulfillment           = try(var.instance.spot.wait_for_fulfillment, true)
   launch_group                   = try(var.instance.spot.launch_group, null)
   block_duration_minutes         = try(var.instance.spot.block_duration_minutes, null)
   instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
@@ -156,4 +156,14 @@ resource "aws_spot_instance_request" "spot" {
     create = try(var.timeouts.create, null)
     delete = try(var.timeouts.delete, null)
   }
+}
+
+resource "aws_ec2_tag" "spot_instance_tags" {
+  for_each = {
+    for k, v in local.all_tags : k => v
+    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false)
+  }
+  resource_id = aws_spot_instance_request.spot[0].spot_instance_id
+  key         = each.key
+  value       = each.value
 }
