@@ -136,7 +136,7 @@ resource "aws_spot_instance_request" "spot" {
   placement_group                      = try(var.instance.placement_group, null)
   tenancy                              = try(var.instance.tenancy, null)
   host_id                              = try(var.instance.host_id, null)
-  tags = local.instance_tags
+  tags                                 = local.instance_tags
   volume_tags = merge(
     local.instance_tags,
     try(var.instance.volume_extra_tags, {})

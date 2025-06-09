@@ -126,7 +126,7 @@ resource "aws_instance" "ami_ignore" {
   placement_group                      = try(var.instance.placement_group, null)
   tenancy                              = try(var.instance.tenancy, null)
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
-  tags = local.instance_tags
+  tags                                 = local.instance_tags
   volume_tags = merge(
     local.all_tags,
     local.backup_tags,

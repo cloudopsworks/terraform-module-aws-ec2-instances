@@ -25,9 +25,13 @@ variable "name_prefix" {
 #   ignore_ami_changes: true | false # defaults to False
 #   ami:
 #     name: "ami-name" # (optional) if stated ami.id will be ignored
+#     architecture: "x86_64" | "arm64" # defaults to "x86_64"
 #     id: "ami-id" # (optional) if stated ami.name will be ignored
 #     most_recent: true | false # defaults to True
 #     owners: ["self"] # defaults to ["self"]
+#     filters: # defaults to []
+#       - name: "filter-name" # (optional) if stated filter.values will be ignored
+#         values: ["filter-value"] # (optional) if stated filter.name will be ignored
 #   type: "t2.micro" # defaults to "t2.micro"
 #   hibernation: true | false # defaults to null
 #   user_data: "user-data" # defaults to null
