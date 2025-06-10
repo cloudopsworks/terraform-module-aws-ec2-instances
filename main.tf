@@ -26,7 +26,7 @@ data "aws_ami" "this" {
     values = [var.instance.ami.name]
   }
   filter {
-    name   = "achitecture"
+    name   = "architecture"
     values = [try(var.instance.ami.architecture, "x86_64")]
   }
   dynamic "filter" {
