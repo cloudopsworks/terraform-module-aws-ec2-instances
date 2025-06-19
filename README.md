@@ -78,6 +78,73 @@ Basic steps to use the module:
 5. Run terragrunt plan to view resource changes.
 6. Run terragrunt apply to create the resources.
 
+Available Variables:
+
+name: (string, optional)
+  - The name of the EC2 Instance
+  - Default: ""
+
+name_prefix: (string, optional)
+  - The name prefix of the EC2 Instance
+  - Default: ""
+
+instance: (map, optional)
+  Complex configuration for EC2 instance. Supports following structure:
+  ```yaml
+  instance:
+    create: true | false     # defaults to True
+    create_spot: true | false # defaults to False
+    dedicated_host: true | false # defaults to False
+    ignore_ami_changes: true | false # defaults to False
+    ami:
+      name: "ami-name" # optional
+      architecture: "x86_64" | "arm64" # defaults to "x86_64"
+      id: "ami-id" # optional
+      most_recent: true | false # defaults to True
+      owners: ["self"] # defaults to ["self"]
+      filters: []
+    type: "t2.micro" # defaults to "t2.micro"
+    hibernation: true | false # defaults to null
+    user_data: "user-data" # defaults to null
+    user_data_base64: "user-data-base64" # defaults to null
+    user_data_replace_on_change: true | false # defaults to null
+    cpu_options:
+      core_count: 1 # defaults to null
+      threads_per_core: 1 # defaults to null
+      amd_sev_snp: true | false # defaults to null
+    availability_zone: "us-east-1a" # defaults to null
+    key_name: "key-name" # defaults to null
+    monitoring: true | false # defaults to null
+    get_password_data: true | false # defaults to null
+    vpc:
+      security_group_ids: ["sg-12345678"] # defaults to null
+      associate_public_ip_address: true | false # defaults to null
+      subnet_id: "subnet-id" # defaults to null
+      private_ip: "private-ip" # defaults to null
+      secondary_private_ips: ["secondary-private-ip"] # defaults to null
+      ipv6_address_count: 1 # defaults to null
+      ipv6_addresses: ["ipv6-address"] # defaults to null
+    ebs:
+      ebs_optimized: true | false # defaults to null
+    backup:
+      enabled: true | false # defaults to false
+      only_tag: true | false # defaults to true
+      schedule_tag: hourly | daily | weekly | monthly # defaults to daily
+      backup_vault_name: "backup-vault-name" # Required if only_tag is false
+  ```
+
+timeouts: (map, optional)
+  - The timeouts configuration for the EC2 Instance
+  - Default: {}
+
+iam: (map, optional)
+  IAM configuration with following structure:
+  ```yaml
+  iam:
+    create: true | false # defaults to false
+    instance_profile: "instance-profile" # defaults to null
+  ```
+
 Example of a Terragrunt configuration referencing this module (terragrunt.hcl):
 ```hcl
 terraform {
@@ -85,12 +152,23 @@ terraform {
 }
 
 inputs = {
-  aws_region     = "us-east-1"
-  instance_count = 2
-  instance_type  = "t2.micro"
-  key_name       = "my-keypair"
-  # Additional optional variables based on your environment structure
-  # ...
+  name = "my-instance"
+  instance = {
+    create = true
+    type = "t2.micro"
+    ami = {
+      name = "my-custom-ami"
+      owners = ["self"]
+    }
+    vpc = {
+      subnet_id = "subnet-123456"
+      security_group_ids = ["sg-123456"]
+    }
+  }
+  iam = {
+    create = true
+    instance_profile = "my-profile"
+  }
 }
 ```
 
@@ -136,13 +214,15 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | ~> 4.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.80.0 |
-| <a name="provider_tls"></a> [tls](#provider\_tls) | 4.0.6 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.0.0 |
+| <a name="provider_tls"></a> [tls](#provider\_tls) | 4.1.0 |
 
 ## Modules
 
@@ -155,6 +235,7 @@ Available targets:
 | Name | Type |
 |------|------|
 | [aws_ec2_host.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host) | resource |
+| [aws_ec2_tag.spot_instance_tags](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
 | [aws_iam_instance_profile.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_role.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
@@ -187,7 +268,17 @@ Available targets:
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_dedicated_host_arn"></a> [dedicated\_host\_arn](#output\_dedicated\_host\_arn) | n/a |
+| <a name="output_dedicated_host_id"></a> [dedicated\_host\_id](#output\_dedicated\_host\_id) | n/a |
+| <a name="output_iam_role"></a> [iam\_role](#output\_iam\_role) | n/a |
+| <a name="output_instance_id"></a> [instance\_id](#output\_instance\_id) | n/a |
+| <a name="output_key_pair_name"></a> [key\_pair\_name](#output\_key\_pair\_name) | n/a |
+| <a name="output_key_pair_public_key"></a> [key\_pair\_public\_key](#output\_key\_pair\_public\_key) | n/a |
+| <a name="output_key_pair_ssh_private_key"></a> [key\_pair\_ssh\_private\_key](#output\_key\_pair\_ssh\_private\_key) | n/a |
+| <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | n/a |
+| <a name="output_state"></a> [state](#output\_state) | n/a |
 
 
 
