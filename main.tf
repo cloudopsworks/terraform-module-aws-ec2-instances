@@ -178,3 +178,13 @@ resource "aws_instance" "this" {
     delete = try(var.timeouts.delete, null)
   }
 }
+
+resource "aws_ec2_tag" "this_eni" {
+  for_each = {
+    for k, v in local.instance_tags : k => v
+    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false)
+  }
+  resource_id = aws_instance.this[0].primary_network_interface_id
+  key         = each.key
+  value       = each.value
+}

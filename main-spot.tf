@@ -159,3 +159,18 @@ resource "aws_ec2_tag" "spot_instance_tags" {
   key         = each.key
   value       = each.value
 }
+
+data "aws_instance" "spot_instance" {
+  count       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) ? 1 : 0
+  instance_id = aws_spot_instance_request.spot[0].spot_instance_id
+}
+
+resource "aws_ec2_tag" "spot_instance_eni" {
+  for_each = {
+    for k, v in local.instance_tags : k => v
+    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false)
+  }
+  resource_id = data.aws_instance.spot_instance[0].network_interface_id
+  key         = each.key
+  value       = each.value
+}

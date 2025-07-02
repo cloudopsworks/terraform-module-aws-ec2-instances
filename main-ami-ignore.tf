@@ -147,3 +147,12 @@ resource "aws_instance" "ami_ignore" {
     ignore_changes = [ami]
   }
 }
+
+resource "aws_ec2_tag" "ami_ignore_eni" {
+  for_each = {
+    for k, v in local.all_tags : k => v if try(var.instance.create, true) && try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false)
+  }
+  resource_id = aws_instance.ami_ignore[0].primary_network_interface_id
+  key         = each.key
+  value       = each.value
+}
