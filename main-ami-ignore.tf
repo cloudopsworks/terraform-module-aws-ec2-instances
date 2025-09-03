@@ -148,9 +148,9 @@ resource "aws_instance" "ami_ignore" {
 }
 
 resource "aws_eip_association" "ami_ignore" {
-  count                = try(var.instance.create, true) && try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) && try(var.instance.vpc.associate_public_ip_address, false) && try(var.instance.public_eip_id, "") != "" ? 1 : 0
+  count                = try(var.instance.create, true) && try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) && !try(var.instance.vpc.associate_public_ip_address, false) && try(var.instance.vpc.public_eip_id, "") != "" ? 1 : 0
   instance_id          = aws_instance.this[0].id
-  allocation_id        = var.instance.public_eip_id
+  allocation_id        = var.instance.vpc.public_eip_id
   network_interface_id = try(var.instance.network_interface.create, false) ? aws_network_interface.this[0].id : null
 }
 
