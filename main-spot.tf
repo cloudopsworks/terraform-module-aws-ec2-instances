@@ -41,7 +41,6 @@ resource "aws_spot_instance_request" "spot" {
   spot_type                      = try(var.instance.spot.type, "one-time")
   wait_for_fulfillment           = try(var.instance.spot.wait_for_fulfillment, true)
   launch_group                   = try(var.instance.spot.launch_group, null)
-  block_duration_minutes         = try(var.instance.spot.block_duration_minutes, null)
   instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
   valid_until                    = try(var.instance.spot.valid_until, null)
   valid_from                     = try(var.instance.spot.valid_from, null)
@@ -74,6 +73,14 @@ resource "aws_spot_instance_request" "spot" {
       tags                  = try(ebs_block_device.value.tags, null)
     }
   }
+  dynamic "ephemeral_block_device" {
+    for_each = try(var.instance.ephemeral_block_device, [])
+    content {
+      device_name  = ephemeral_block_device.value.device_name
+      no_device    = try(ephemeral_block_device.value.no_device, null)
+      virtual_name = try(ephemeral_block_device.value.virtual_name, null)
+    }
+  }
   dynamic "metadata_options" {
     for_each = length(try(var.instance.metadata_options, {})) > 0 ? [var.instance.metadata_options] : []
     content {
@@ -81,22 +88,6 @@ resource "aws_spot_instance_request" "spot" {
       http_put_response_hop_limit = try(metadata_options.value.http_put_response_hop_limit, null)
       http_tokens                 = try(metadata_options.value.http_tokens, null)
       instance_metadata_tags      = try(metadata_options.value.instance_metadata_tags, null)
-    }
-  }
-  dynamic "network_interface" {
-    for_each = try(var.instance.network_interface, [])
-    content {
-      device_index          = network_interface.value.device_index
-      network_interface_id  = try(network_interface.value.network_interface_id, null)
-      delete_on_termination = try(network_interface.value.delete_on_termination, true)
-    }
-  }
-  dynamic "ephemeral_block_device" {
-    for_each = try(var.instance.ephemeral_block_device, [])
-    content {
-      device_name  = ephemeral_block_device.value.device_name
-      no_device    = try(ephemeral_block_device.value.no_device, null)
-      virtual_name = try(ephemeral_block_device.value.virtual_name, null)
     }
   }
   dynamic "private_dns_name_options" {
@@ -168,7 +159,7 @@ data "aws_instance" "spot_instance" {
 resource "aws_ec2_tag" "spot_instance_eni" {
   for_each = {
     for k, v in local.instance_tags : k => v
-    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false)
+    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) && !try(var.instance.network_interface.create, false)
   }
   resource_id = data.aws_instance.spot_instance[0].network_interface_id
   key         = each.key
