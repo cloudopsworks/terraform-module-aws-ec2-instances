@@ -156,6 +156,13 @@ data "aws_instance" "spot_instance" {
   instance_id = aws_spot_instance_request.spot[0].spot_instance_id
 }
 
+resource "aws_eip_association" "spot_instance" {
+  count                = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) && try(var.instance.vpc.associate_public_ip_address, false) && try(var.instance.public_eip_id, "") != "" ? 1 : 0
+  instance_id          = aws_instance.this[0].id
+  allocation_id        = var.instance.public_eip_id
+  network_interface_id = try(var.instance.network_interface.create, false) ? aws_network_interface.this[0].id : null
+}
+
 resource "aws_ec2_tag" "spot_instance_eni" {
   for_each = {
     for k, v in local.instance_tags : k => v
