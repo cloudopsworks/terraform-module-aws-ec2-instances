@@ -41,6 +41,16 @@ data "aws_ami" "this" {
   }
 }
 
+resource "aws_network_interface" "this" {
+  count             = try(var.instance.create, true) && try(var.instance.network_interface.create, false) ? 1 : 0
+  description       = "ENI for ${local.name}"
+  subnet_id         = var.instance.network_interface.subnet_id
+  private_ips       = try(var.instance.network_interface.private_ips, null)
+  security_groups   = try(var.instance.security_group.create, false) ? concat([aws_security_group.this[0].id], try(var.instance.vpc.security_group_ids, [])) : try(var.instance.vpc.security_group_ids, null)
+  source_dest_check = try(var.instance.source_dest_check, null)
+  tags              = local.instance_tags
+}
+
 resource "aws_instance" "this" {
   count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) ? 1 : 0
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
@@ -115,12 +125,11 @@ resource "aws_instance" "this" {
       instance_metadata_tags      = try(metadata_options.value.instance_metadata_tags, null)
     }
   }
-  dynamic "network_interface" {
-    for_each = try(var.instance.network_interface, [])
+  dynamic "primary_network_interface" {
+    for_each = length(try(var.instance.network_interface, {})) > 0 && !try(var.instance.network_interface.create, false) ? [1] : []
     content {
-      device_index          = network_interface.value.device_index
-      network_interface_id  = try(network_interface.value.network_interface_id, null)
-      delete_on_termination = try(network_interface.value.delete_on_termination, true)
+      delete_on_termination = try(var.instance.network_interface.delete_on_termination, null)
+      network_interface_id  = try(var.instance.network_interface.network_interface_id, null)
     }
   }
   dynamic "private_dns_name_options" {
@@ -182,7 +191,7 @@ resource "aws_instance" "this" {
 resource "aws_ec2_tag" "this_eni" {
   for_each = {
     for k, v in local.instance_tags : k => v
-    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false)
+    if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) && !try(var.instance.network_interface.create, false)
   }
   resource_id = aws_instance.this[0].primary_network_interface_id
   key         = each.key

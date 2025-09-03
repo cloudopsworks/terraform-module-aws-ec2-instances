@@ -56,8 +56,42 @@ variable "name_prefix" {
 #     secondary_private_ips: ["secondary-private-ip"] # defaults to null
 #     ipv6_address_count: 1 # defaults to null
 #     ipv6_addresses: ["ipv6-address"] # defaults to null
+#   network_interface:
+#     create: true | false # defaults to false
+#     # Required if crate is true
+#     subnet_id: "subnet-id" # defaults to null
+#     private_ips: ["private-ip"] # defaults to null
+#     # Optionals if create is false
+#     delete_on_termination: true | false # defaults to null
+#     network_interface_id: "eni-id" # defaults to null
+#   root_block_device:
+#     volume_size: 8 # defaults to null
+#     volume_type: "gp3" # defaults to null
+#     iops: 3000 # defaults to null
+#     throughput: 125 # defaults to null
+#     encrypted: true | false # defaults to null
 #   ebs:
 #     ebs_optimized: true | false # defaults to null
+#     block_device:
+#       - device_name: "/dev/xvda"
+#         volume_size: 8
+#         volume_type: "gp3"
+#         iops: 3000
+#         throughput: 125
+#         encrypted: true
+#         kms_key_id: "kms-key-id"
+#         delete_on_termination: true
+#   ephemeral_block_device:
+#     - device_name: "/dev/sdh"
+#       virtual_name: "ephemeral0"
+#       no_device: true
+#   metadata_options:
+#     http_endpoint: "enabled" | "disabled" # defaults to "enabled"
+#     http_tokens: "required" | "optional" # defaults to "optional"
+#     http_put_response_hop_limit: 1 # defaults to null
+#     instance_metadata_tags: "enabled" | "disabled" # defaults to "enabled"
+#   placement_group: "placement-group" # defaults to null
+#   tenancy: "default" | "dedicated" # defaults to null
 #   backup:
 #     enabled: true | false # defaults to false
 #     only_tag: true | false # defaults to true
