@@ -13,10 +13,11 @@
 # Terraform AWS EC2 Instance
 
 
-This Terraform module simplifies provisioning and managing Amazon EC2 instances in AWS. 
-It allows you to define configurations such as instance types, VPC subnets, security groups, 
-and more. By encapsulating all essential settings and optional features, the module helps 
-ensure that your EC2 infrastructure remains consistent, reproducible, and version-controlled.
+Opinionated Terraform module for provisioning and managing Amazon EC2 instances at scale.
+It standardizes AMI discovery, instance types, networking, IAM, storage, and backups
+behind a simple, predictable input schema. Optional capabilities include Spot requests,
+automatic key pair and security group creation, dedicated host support, and sensible
+tagging — keeping EC2 deployments consistent, auditable, and reproducible across environments.
 
 
 ---
@@ -51,15 +52,14 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 ## Introduction
 
-The Terraform AWS EC2 Instance module is designed to provide an easy way to manage and 
-scale virtual machines within the AWS ecosystem. Whether you need to provision single or 
-multiple EC2 instances, this module offers an opinionated yet flexible approach that 
-streamlines the process of creating, configuring, and maintaining your infrastructure.
+This module provides a straightforward, opinionated way to create and manage EC2 instances
+in AWS. It supports on-demand and Spot instances, AMI discovery, flexible networking,
+IAM integration, storage configuration, optional automatic key pair and security group
+creation, and dedicated host placement.
 
-By leveraging the features of Terraform, you can control changes to your EC2 instances 
-through code, facilitate audit trails, and eliminate the need for manual configuration. 
-This module is a specific solution aimed at making it straightforward for teams to define 
-and deploy EC2-based workloads in AWS with minimal overhead.
+The module expects an org object to drive consistent naming and tagging across resources.
+Managing instances as code with Terraform (and Terragrunt) enables reviewable changes,
+auditability, and repeatable deployments across environments with minimal boilerplate.
 
 ## Usage
 
@@ -68,12 +68,16 @@ and deploy EC2-based workloads in AWS with minimal overhead.
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-aws-ec2-instances/releases).
 
 
-To incorporate this module, reference it with Terragrunt while following the structure of the .boilerplate templates in the "develop" branch of this repository.
+To incorporate this module, reference it with Terragrunt and follow the .boilerplate structure in the "develop" branch of this repository.
 
 Basic steps to use the module:
 1. Install Terraform (v1.0 or higher) and Terragrunt.
 2. Create or update your Terragrunt configuration files using the .boilerplate patterns.
-3. Provide required variables (AWS region, AMI IDs, instance types, etc.).
+3. Provide inputs: org (required), name or name_prefix, and the instance map (see schema below). Optionally adjust iam/timeouts.
+   - By default, iam.create = true and the module creates an IAM role and instance profile.
+     To reuse an existing profile instead, set iam.create = false and set iam.instance_profile.
+   - For Spot instances, set instance.create_spot = true and optionally configure instance.spot options.
+   - Configure the AWS provider (e.g., region) in your stack.
 4. Run terragrunt init to initialize your working directory.
 5. Run terragrunt plan to view resource changes.
 6. Run terragrunt apply to create the resources.
@@ -88,49 +92,157 @@ name_prefix: (string, optional)
   - The name prefix of the EC2 Instance
   - Default: ""
 
+org: (object, required)
+  - Organization and environment context used for consistent naming and tagging
+  - Keys:
+    - organization_name (string)
+    - organization_unit (string)
+    - environment_type (string)
+    - environment_name (string)
+
+is_hub: (bool, optional)
+  - Whether this stack represents a HUB configuration
+  - Default: false
+
+spoke_def: (string, optional)
+  - Spoke identifier used in the computed system name
+  - Default: "001"
+
+extra_tags: (map(string), optional)
+  - Additional tags to merge with common tags and apply to resources
+  - Default: {}
+
 instance: (map, optional)
   Complex configuration for EC2 instance. Supports following structure:
   ```yaml
   instance:
-    create: true | false     # defaults to True
-    create_spot: true | false # defaults to False
-    dedicated_host: true | false # defaults to False
-    ignore_ami_changes: true | false # defaults to False
+    create: true | false     # defaults to true
+    create_spot: true | false # defaults to false
+    ignore_ami_changes: true | false # defaults to false
+    spot:
+      price: "0.02"                        # optional max price; omit to use current market
+      type: "one-time"                     # "one-time" | "persistent" (default: "one-time")
+      wait_for_fulfillment: true | false   # defaults to true
+      launch_group: "group-name"           # optional
+      block_duration_minutes: 60           # optional
+      instance_interruption_behavior: "terminate" | "stop" | "hibernate"
+      valid_from: "2025-01-01T00:00:00Z"   # optional
+      valid_until: "2025-12-31T23:59:59Z"  # optional
+    dedicated_host:           # launch into a dedicated host when enabled (not for spot)
+      enabled: true | false   # defaults to false
+      instance_family: "c7i"  # optional; else uses instance.type
+      host_recovery: true | false
+      auto_placement: "on" | "off"
     ami:
-      name: "ami-name" # optional
+      name: "ami-name"        # optional; if provided, ami.id is ignored
       architecture: "x86_64" | "arm64" # defaults to "x86_64"
-      id: "ami-id" # optional
-      most_recent: true | false # defaults to True
-      owners: ["self"] # defaults to ["self"]
-      filters: []
-    type: "t2.micro" # defaults to "t2.micro"
-    hibernation: true | false # defaults to null
-    user_data: "user-data" # defaults to null
-    user_data_base64: "user-data-base64" # defaults to null
-    user_data_replace_on_change: true | false # defaults to null
+      id: "ami-id"            # optional; used when ami.name is not provided
+      most_recent: true | false # defaults to true
+      owners: ["self"]        # defaults to ["self"]
+      filters:                # defaults to []
+        - name: "filter-name"
+          values: ["filter-value"]
+    type: "t2.micro"          # defaults to "t2.micro"
+    hibernation: true | false
+    user_data: "user-data"
+    user_data_base64: "user-data-base64"
+    user_data_replace_on_change: true | false
     cpu_options:
-      core_count: 1 # defaults to null
-      threads_per_core: 1 # defaults to null
-      amd_sev_snp: true | false # defaults to null
-    availability_zone: "us-east-1a" # defaults to null
-    key_name: "key-name" # defaults to null
-    monitoring: true | false # defaults to null
-    get_password_data: true | false # defaults to null
+      core_count: 1
+      threads_per_core: 1
+      amd_sev_snp: true | false
+    availability_zone: "us-east-1a"
+    key_pair:
+      create: true | false    # defaults to false (creates and tags a new key)
+      name: "existing-key-name" # if create=false, use this existing key
+    monitoring: true | false
+    get_password_data: true | false
     vpc:
-      security_group_ids: ["sg-12345678"] # defaults to null
-      associate_public_ip_address: true | false # defaults to null
-      subnet_id: "subnet-id" # defaults to null
-      private_ip: "private-ip" # defaults to null
-      secondary_private_ips: ["secondary-private-ip"] # defaults to null
-      ipv6_address_count: 1 # defaults to null
-      ipv6_addresses: ["ipv6-address"] # defaults to null
+      security_group_ids: ["sg-12345678"]
+      associate_public_ip_address: true | false
+      subnet_id: "subnet-id"
+      private_ip: "private-ip"
+      secondary_private_ips: ["secondary-private-ip"]
+      ipv6_address_count: 1
+      ipv6_addresses: ["ipv6-address"]
+    security_group:
+      create: true | false    # defaults to false; when true, module creates a SG in the subnet's VPC
+      rules:                  # optional map of rules applied when create=true
+        ssh:
+          type: "ingress"
+          from_port: 22
+          to_port: 22
+          protocol: "tcp"
+          cidr_blocks: ["0.0.0.0/0"]
+    network_interface:
+      create: true | false    # defaults to false
+      subnet_id: "subnet-id"  # required when create=true
+      private_ips: ["private-ip"]
+      delete_on_termination: true | false
+      network_interface_id: "eni-id"
+    # For Spot instances, use a list of network_interface blocks:
+    # network_interface:
+    #   - device_index: 0
+    #     network_interface_id: "eni-id"
+    #     delete_on_termination: true | false # defaults to true
+    root_block_device:
+      - volume_size: 8
+        volume_type: "gp3"
+        iops: 3000
+        throughput: 125
+        encrypted: true | false
+        kms_key_id: "kms-key-id"
+        delete_on_termination: true | false
+        tags: { "Name": "root-volume" }
     ebs:
-      ebs_optimized: true | false # defaults to null
+      ebs_optimized: true | false
+      block_device:
+        - device_name: "/dev/xvdb"
+          volume_size: 8
+          volume_type: "gp3"
+          iops: 3000
+          throughput: 125
+          encrypted: true
+          kms_key_id: "kms-key-id"
+          snapshot_id: "snap-1234"
+          delete_on_termination: true
+          tags: { "Name": "data-volume" }
+    ephemeral_block_device:
+      - device_name: "/dev/sdh"
+        virtual_name: "ephemeral0"
+        no_device: true
+    metadata_options:
+      http_endpoint: "enabled" | "disabled"    # defaults to "enabled"
+      http_tokens: "required" | "optional"     # defaults to "optional"
+      http_put_response_hop_limit: 1
+      instance_metadata_tags: "enabled" | "disabled" # defaults to "enabled"
+    private_dns_name_options:
+      hostname_type: "ip-name" | "resource-name"
+      enable_resource_name_dns_a_record: true | false
+      enable_resource_name_dns_aaaa_record: true | false
+    maintenance_options:
+      auto_recovery: "default" | "disabled"
+    enclave_options:
+      enabled: true | false
+    cpu_credits: "standard" | "unlimited"      # for T-family instances only
+    capacity_reservation_specification:
+      capacity_reservation_preference: "open" | "none"
+      capacity_reservation_target:
+        capacity_reservation_id: "cr-0123456789abcdef0"
+        capacity_reservation_resource_group_arn: "arn:aws:resource-groups:..."
+    source_dest_check: true | false
+    disable_api_termination: true | false
+    disable_api_stop: true | false
+    instance_initiated_shutdown_behavior: "stop" | "terminate"
+    placement_group: "placement-group"
+    tenancy: "default" | "dedicated"
+    host_id: "h-0123456789abcdef0"             # optional; used when attaching to an existing dedicated host
     backup:
-      enabled: true | false # defaults to false
-      only_tag: true | false # defaults to true
-      schedule_tag: hourly | daily | weekly | monthly # defaults to daily
-      backup_vault_name: "backup-vault-name" # Required if only_tag is false
+      enabled: true | false                     # defaults to false
+      only_tag: true | false                    # defaults to true
+      schedule: hourly | daily | weekly | monthly # defaults to daily; used for the 'aws-backup-schedule' tag
+    extra_tags: { "env": "dev" }                # additional tags for the instance
+    volume_extra_tags: { "tier": "gold" }       # additional tags for EBS volumes
   ```
 
 timeouts: (map, optional)
@@ -138,11 +250,17 @@ timeouts: (map, optional)
   - Default: {}
 
 iam: (map, optional)
-  IAM configuration with following structure:
+  IAM configuration for the EC2 instance profile:
   ```yaml
   iam:
-    create: true | false # defaults to false
-    instance_profile: "instance-profile" # defaults to null
+    create: true | false                 # defaults to true; when true module creates role + instance profile
+    path: "/service-role/"              # optional IAM path
+    role_description: "IAM Instance Role <name>" # optional description
+    permissions_boundary: "arn:aws:iam::123456789012:policy/BoundaryPolicy" # optional
+    extra_tags: { "team": "platform" } # optional tags for IAM resources
+    role_policies:                       # optional map (name => policy ARN) to attach to the role
+      ssm: "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    instance_profile: "existing-profile" # used only when create=false to use an existing instance profile
   ```
 
 Example of a Terragrunt configuration referencing this module (terragrunt.hcl):
@@ -152,22 +270,54 @@ terraform {
 }
 
 inputs = {
+  org = {
+    organization_name = "acme"
+    organization_unit = "platform"
+    environment_type  = "nonprod"
+    environment_name  = "dev"
+  }
+
   name = "my-instance"
+
   instance = {
     create = true
-    type = "t2.micro"
+    type   = "t3.micro"
+
     ami = {
-      name = "my-custom-ami"
+      name   = "my-custom-ami"
       owners = ["self"]
     }
+
+    key_pair = {
+      create = false
+      name   = "my-existing-key"
+    }
+
     vpc = {
-      subnet_id = "subnet-123456"
+      subnet_id          = "subnet-123456"
       security_group_ids = ["sg-123456"]
     }
+
+    # Optionally let module create and manage a security group with rules:
+    # security_group = {
+    #   create = true
+    #   rules = {
+    #     ssh = {
+    #       type        = "ingress"
+    #       from_port   = 22
+    #       to_port     = 22
+    #       protocol    = "tcp"
+    #       cidr_blocks = ["0.0.0.0/0"]
+    #     }
+    #   }
+    # }
   }
+
+  # By default, the module creates an IAM role and instance profile (iam.create = true).
+  # To use an existing instance profile instead:
   iam = {
-    create = true
-    instance_profile = "my-profile"
+    create           = false
+    instance_profile = "my-existing-profile"
   }
 }
 ```
@@ -186,13 +336,19 @@ inputs = {
 Here are sample use cases you can adapt in the .boilerplate files on the "develop" branch:
 
 1. Single Development Instance
-   - Combine this module with minimal settings to spin up a small instance for dev/testing.
+   - Minimal inputs to spin up a small on-demand instance for dev/testing.
 
-2. Multi-Instance Setup
-   - Leverage the instance_count variable to manage auto-scaling scenarios or replicate standardized instances in multiple environments.
+2. Spot Instance for Cost Optimization
+   - Set instance.create_spot = true to request spot capacity with the same configuration.
 
-3. Private Subnet Deployment
-   - Apply advanced networking configurations using Terragrunt's environment-based structure, automatically enforcing best practices established in boilerplate templates.
+3. Dedicated Host Placement
+   - Set instance.dedicated_host.enabled = true to launch on a dedicated host (supported for the type). Optionally set instance.dedicated_host.instance_family or use host_id to attach to an existing host.
+
+4. Private Subnet Deployment
+   - Provide instance.vpc.subnet_id and security_group_ids; omit public IP or set associate_public_ip_address = false.
+
+5. Custom Storage and Metadata
+   - Use instance.root_block_device or instance.ebs.block_device for volumes, and instance.metadata_options to enforce IMDSv2.
 
 For more Terragrunt-based examples and structural hints, see the .boilerplate directory in the "develop" branch.
 
@@ -214,14 +370,14 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
 | <a name="requirement_tls"></a> [tls](#requirement\_tls) | ~> 4.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.0.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.11.0 |
 | <a name="provider_tls"></a> [tls](#provider\_tls) | 4.1.0 |
 
 ## Modules
@@ -235,19 +391,31 @@ Available targets:
 | Name | Type |
 |------|------|
 | [aws_ec2_host.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host) | resource |
+| [aws_ec2_tag.ami_ignore_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
+| [aws_ec2_tag.spot_instance_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
 | [aws_ec2_tag.spot_instance_tags](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
+| [aws_ec2_tag.this_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
+| [aws_eip_association.ami_ignore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip_association) | resource |
+| [aws_eip_association.spot_instance](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip_association) | resource |
+| [aws_eip_association.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip_association) | resource |
 | [aws_iam_instance_profile.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_role.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_instance.ami_ignore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
 | [aws_instance.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
 | [aws_key_pair.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/key_pair) | resource |
+| [aws_network_interface.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/network_interface) | resource |
+| [aws_secretsmanager_secret.instance_private_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret.instance_public_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret_version.instance_private_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_secretsmanager_secret_version.instance_public_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group_rule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_spot_instance_request.spot](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/spot_instance_request) | resource |
 | [tls_private_key.this](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_instance.spot_instance](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/instance) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_subnet.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/subnet) | data source |

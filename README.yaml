@@ -20,10 +20,11 @@ description: |-
 # Introduction to the project
 introduction: |-
   This module provides a straightforward, opinionated way to create and manage EC2 instances
-  in AWS. It supports on-demand and spot instances, AMI discovery, flexible networking,
+  in AWS. It supports on-demand and Spot instances, AMI discovery, flexible networking,
   IAM integration, storage configuration, optional automatic key pair and security group
   creation, and dedicated host placement.
   
+  The module expects an org object to drive consistent naming and tagging across resources.
   Managing instances as code with Terraform (and Terragrunt) enables reviewable changes,
   auditability, and repeatable deployments across environments with minimal boilerplate.
 
@@ -34,9 +35,10 @@ usage: |-
   Basic steps to use the module:
   1. Install Terraform (v1.0 or higher) and Terragrunt.
   2. Create or update your Terragrunt configuration files using the .boilerplate patterns.
-  3. Provide inputs: name and the instance map (see schema below). Optionally adjust iam/timeouts.
+  3. Provide inputs: org (required), name or name_prefix, and the instance map (see schema below). Optionally adjust iam/timeouts.
      - By default, iam.create = true and the module creates an IAM role and instance profile.
        To reuse an existing profile instead, set iam.create = false and set iam.instance_profile.
+     - For Spot instances, set instance.create_spot = true and optionally configure instance.spot options.
      - Configure the AWS provider (e.g., region) in your stack.
   4. Run terragrunt init to initialize your working directory.
   5. Run terragrunt plan to view resource changes.
@@ -79,6 +81,15 @@ usage: |-
       create: true | false     # defaults to true
       create_spot: true | false # defaults to false
       ignore_ami_changes: true | false # defaults to false
+      spot:
+        price: "0.02"                        # optional max price; omit to use current market
+        type: "one-time"                     # "one-time" | "persistent" (default: "one-time")
+        wait_for_fulfillment: true | false   # defaults to true
+        launch_group: "group-name"           # optional
+        block_duration_minutes: 60           # optional
+        instance_interruption_behavior: "terminate" | "stop" | "hibernate"
+        valid_from: "2025-01-01T00:00:00Z"   # optional
+        valid_until: "2025-12-31T23:59:59Z"  # optional
       dedicated_host:           # launch into a dedicated host when enabled (not for spot)
         enabled: true | false   # defaults to false
         instance_family: "c7i"  # optional; else uses instance.type
@@ -221,6 +232,13 @@ usage: |-
   }
 
   inputs = {
+    org = {
+      organization_name = "acme"
+      organization_unit = "platform"
+      environment_type  = "nonprod"
+      environment_name  = "dev"
+    }
+
     name = "my-instance"
 
     instance = {
