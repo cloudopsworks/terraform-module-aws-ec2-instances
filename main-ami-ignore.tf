@@ -143,7 +143,8 @@ resource "aws_instance" "ami_ignore" {
     delete = try(var.timeouts.delete, null)
   }
   lifecycle {
-    ignore_changes = [ami]
+    ignore_changes        = [ami]
+    create_before_destroy = true
   }
 }
 
