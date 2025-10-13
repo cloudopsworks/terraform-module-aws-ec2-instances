@@ -139,6 +139,9 @@ resource "aws_spot_instance_request" "spot" {
     create = try(var.timeouts.create, null)
     delete = try(var.timeouts.delete, null)
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_ec2_tag" "spot_instance_tags" {

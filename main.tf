@@ -186,6 +186,9 @@ resource "aws_instance" "this" {
     update = try(var.timeouts.update, null)
     delete = try(var.timeouts.delete, null)
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_eip_association" "this" {
