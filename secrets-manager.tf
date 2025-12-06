@@ -9,25 +9,25 @@
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "instance_public_key" {
-  count = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) ? 1 : 0
+  count = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) && try(var.instance.key_pair.create, false) ? 1 : 0
   name  = "${local.secret_store_path}/instance/${local.name}/public-key"
   tags  = local.all_tags
 }
 
 resource "aws_secretsmanager_secret_version" "instance_public_key" {
-  count         = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) ? 1 : 0
+  count         = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) && try(var.instance.key_pair.create, false) ? 1 : 0
   secret_id     = aws_secretsmanager_secret.instance_public_key[count.index].id
   secret_string = aws_key_pair.this[count.index].public_key
 }
 
 resource "aws_secretsmanager_secret" "instance_private_key" {
-  count = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) ? 1 : 0
+  count = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) && try(var.instance.key_pair.create, false) ? 1 : 0
   name  = "${local.secret_store_path}/instance/${local.name}/private-key"
   tags  = local.all_tags
 }
 
 resource "aws_secretsmanager_secret_version" "instance_private_key" {
-  count         = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) ? 1 : 0
+  count         = try(var.instance.create, true) && try(var.instance.secrets_manager_enabled, true) && try(var.instance.key_pair.create, false) ? 1 : 0
   secret_id     = aws_secretsmanager_secret.instance_private_key[count.index].id
   secret_string = tls_private_key.this[count.index].private_key_pem
 }
