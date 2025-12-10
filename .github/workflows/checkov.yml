@@ -1,0 +1,50 @@
+##
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
+#
+name: Checkov
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - .github/workflows/checkov.yml
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/terraform.tfvars'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - name: Checkout w/Blueprint
+        uses: cloudopsworks/blueprints/cd/checkout@v5.10
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          source_ref: ${{ github.base_ref }}
+          blueprint_ref: 'v5.10'
+
+      - name: Pipeline Configuration
+        id: config
+        uses: ./bp/ci/config/terraform
+
+      - name: Run Checkov Checks
+        if: ${{ steps.config.outputs.checkov_enabled == 'true' }}
+        id: checkov
+        uses: ./bp/ci/scan/checkov
+
