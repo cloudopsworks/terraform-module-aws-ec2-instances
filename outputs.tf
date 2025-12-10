@@ -41,6 +41,10 @@ output "security_group_id" {
   value = length(aws_security_group.this) > 0 ? aws_security_group.this[0].id : ""
 }
 
+output "security_group_name" {
+  value = length(aws_security_group.this) > 0 ? aws_security_group.this[0].name : ""
+}
+
 output "dedicated_host_id" {
   value = length(aws_ec2_host.this) > 0 ? aws_ec2_host.this[0].id : ""
 }
