@@ -49,9 +49,12 @@ data "aws_iam_policy_document" "policy" {
       effect    = try(statement.value.effect, null)
       actions   = try(statement.value.actions, [])
       resources = try(statement.value.resources, [])
-      principals {
-        type        = try(statement.value.principals.type, null)
-        identifiers = try(statement.value.principals.identifiers, [])
+      dynamic "principals" {
+        for_each = try(statement.value.principals, null) != null ? [statement.value.principals] : []
+        content {
+          type        = try(principals.value.type, null)
+          identifiers = try(principals.value.identifiers, [])
+        }
       }
       dynamic "condition" {
         for_each = try(statement.value.conditions, [])
