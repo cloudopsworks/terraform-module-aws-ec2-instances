@@ -105,7 +105,7 @@ resource "aws_instance" "this" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = merge(local.all_tags,try(ebs_block_device.value.tags, {}))
+      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
