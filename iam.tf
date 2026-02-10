@@ -40,6 +40,38 @@ resource "aws_iam_role" "this" {
   })
 }
 
+data "aws_iam_policy_document" "policy" {
+  count = try(var.instance.create, true) && try(var.iam.create, true) && length(try(var.iam.policies, [])) > 0 ? length(try(var.iam.policies, [])) : 0
+  dynamic "statement" {
+    for_each = try(var.iam.policies[count.index].statements, [])
+    content {
+      sid       = try(statement.value.sid, null)
+      effect    = try(statement.value.effect, null)
+      actions   = try(statement.value.actions, [])
+      resources = try(statement.value.resources, [])
+      principals {
+        type        = try(statement.value.principals.type, null)
+        identifiers = try(statement.value.principals.identifiers, [])
+      }
+      dynamic "condition" {
+        for_each = try(statement.value.conditions, [])
+        content {
+          test     = try(condition.value.test, null)
+          variable = try(condition.value.variable, null)
+          values   = try(condition.value.values, [])
+        }
+      }
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "policy" {
+  count  = try(var.instance.create, true) && try(var.iam.create, true) && length(try(var.iam.policies, [])) > 0 ? length(try(var.iam.policies, [])) : 0
+  role   = aws_iam_role.this[0].id
+  name   = var.iam.policies[count.index].name
+  policy = data.aws_iam_policy_document.policy[count.index].json
+}
+
 resource "aws_iam_role_policy_attachment" "this" {
   for_each = {
     for k, v in try(var.iam.role_policies, {}) : k => v if try(var.instance.create, true) && try(var.iam.create, true)
