@@ -8,11 +8,11 @@
 #
 
 output "instance_id" {
-  value = length(aws_instance.this) > 0 ? aws_instance.this[0].id : (length(aws_instance.ami_ignore) > 0 ? aws_instance.ami_ignore[0].id : (length(aws_spot_instance_request.spot) > 0 ? aws_spot_instance_request.spot[0].spot_instance_id : ""))
+  value = length(aws_instance.this) > 0 ? aws_instance.this[0].id : (length(aws_instance.ami_ignore) > 0 ? aws_instance.ami_ignore[0].id : (length(aws_instance.spot) > 0 ? aws_instance.spot[0].id : ""))
 }
 
 output "state" {
-  value = length(aws_instance.this) > 0 ? aws_instance.this[0].instance_state : (length(aws_instance.ami_ignore) > 0 ? aws_instance.ami_ignore[0].instance_state : (length(aws_spot_instance_request.spot) > 0 ? aws_spot_instance_request.spot[0].spot_request_state : ""))
+  value = length(aws_instance.this) > 0 ? aws_instance.this[0].instance_state : (length(aws_instance.ami_ignore) > 0 ? aws_instance.ami_ignore[0].instance_state : (length(aws_instance.spot) > 0 ? aws_instance.spot[0].instance_state : ""))
 }
 
 output "iam_role" {

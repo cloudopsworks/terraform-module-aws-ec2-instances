@@ -7,7 +7,7 @@
 #     Distributed Under Apache v2.0 License
 #
 
-resource "aws_spot_instance_request" "spot" {
+resource "aws_instance" "spot" {
   count                       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) ? 1 : 0
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
@@ -37,25 +37,27 @@ resource "aws_spot_instance_request" "spot" {
   ipv6_addresses              = try(var.instance.vpc.ipv6_addresses, null)
   ebs_optimized               = try(var.instance.ebs.ebs_optimized, null)
   # SPOT
-  spot_price                     = try(var.instance.spot.price, null)
-  spot_type                      = try(var.instance.spot.type, "one-time")
-  wait_for_fulfillment           = try(var.instance.spot.wait_for_fulfillment, true)
-  launch_group                   = try(var.instance.spot.launch_group, null)
-  instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
-  valid_until                    = try(var.instance.spot.valid_until, null)
-  valid_from                     = try(var.instance.spot.valid_from, null)
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      max_price                      = try(var.instance.spot.price, null)
+      spot_instance_type             = try(var.instance.spot.type, "one-time")
+      instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
+      valid_until                    = try(var.instance.spot.valid_until, null)
+    }
+  }
   # SPOT
   dynamic "root_block_device" {
-    for_each = try(var.instance.root_block_device, [])
+    for_each = length(try(var.instance.root_block_device, {})) > 0 ? [1] : []
     content {
-      delete_on_termination = try(root_block_device.value.delete_on_termination, null)
-      encrypted             = try(root_block_device.value.encrypted, null)
-      iops                  = try(root_block_device.value.iops, null)
-      kms_key_id            = try(root_block_device.value.kms_key_id, null)
-      volume_size           = try(root_block_device.value.volume_size, null)
-      volume_type           = try(root_block_device.value.volume_type, null)
-      throughput            = try(root_block_device.value.throughput, null)
-      tags                  = try(root_block_device.value.tags, null)
+      delete_on_termination = try(var.instance.root_block_device.delete_on_termination, null)
+      encrypted             = try(var.instance.root_block_device.encrypted, null)
+      iops                  = try(var.instance.root_block_device.iops, null)
+      kms_key_id            = try(var.instance.root_block_device.kms_key_id, null)
+      volume_size           = try(var.instance.root_block_device.volume_size, null)
+      volume_type           = try(var.instance.root_block_device.volume_type, null)
+      throughput            = try(var.instance.root_block_device.throughput, null)
+      tags                  = try(var.instance.root_block_device.tags, null)
     }
   }
   dynamic "ebs_block_device" {
@@ -70,7 +72,7 @@ resource "aws_spot_instance_request" "spot" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = try(ebs_block_device.value.tags, null)
+      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
@@ -137,6 +139,7 @@ resource "aws_spot_instance_request" "spot" {
   )
   timeouts {
     create = try(var.timeouts.create, null)
+    update = try(var.timeouts.update, null)
     delete = try(var.timeouts.delete, null)
   }
   lifecycle {
@@ -149,14 +152,9 @@ resource "aws_ec2_tag" "spot_instance_tags" {
     for k, v in local.instance_tags : k => v
     if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false)
   }
-  resource_id = aws_spot_instance_request.spot[0].spot_instance_id
+  resource_id = aws_instance.spot[0].id
   key         = each.key
   value       = each.value
-}
-
-data "aws_instance" "spot_instance" {
-  count       = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) ? 1 : 0
-  instance_id = aws_spot_instance_request.spot[0].spot_instance_id
 }
 
 resource "aws_eip_association" "spot_instance" {
@@ -171,7 +169,7 @@ resource "aws_ec2_tag" "spot_instance_eni" {
     for k, v in local.instance_tags : k => v
     if try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) && !try(var.instance.network_interface.create, false)
   }
-  resource_id = data.aws_instance.spot_instance[0].network_interface_id
+  resource_id = aws_instance.spot[0].id
   key         = each.key
   value       = each.value
 }

@@ -105,7 +105,7 @@ resource "aws_instance" "this" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = try(ebs_block_device.value.tags, null)
+      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
@@ -174,12 +174,8 @@ resource "aws_instance" "this" {
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
   tags                                 = local.instance_tags
   volume_tags = merge(
-    local.all_tags,
-    local.backup_tags,
-    try(var.instance.volume_extra_tags, {}),
-    {
-      Name = local.name
-    }
+    local.instance_tags,
+    try(var.instance.volume_extra_tags, {})
   )
   timeouts {
     create = try(var.timeouts.create, null)
