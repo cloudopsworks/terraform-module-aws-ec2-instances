@@ -40,8 +40,8 @@ resource "aws_instance" "spot" {
   instance_market_options {
     market_type = "spot"
     spot_options {
-      spot_price                     = try(var.instance.spot.price, null)
-      spot_instance_type = try(var.instance.spot.type, "one-time")
+      max_price                      = try(var.instance.spot.price, null)
+      spot_instance_type             = try(var.instance.spot.type, "one-time")
       instance_interruption_behavior = try(var.instance.spot.instance_interruption_behavior, null)
       valid_until                    = try(var.instance.spot.valid_until, null)
     }
@@ -72,7 +72,7 @@ resource "aws_instance" "spot" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = merge(local.all_tags,try(ebs_block_device.value.tags, {}))
+      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
