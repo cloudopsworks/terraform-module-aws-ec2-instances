@@ -37,16 +37,16 @@ resource "aws_instance" "ami_ignore" {
   ipv6_addresses              = try(var.instance.vpc.ipv6_addresses, null)
   ebs_optimized               = try(var.instance.ebs.ebs_optimized, null)
   dynamic "root_block_device" {
-    for_each = try(var.instance.root_block_device, [])
+    for_each = length(try(var.instance.root_block_device, {})) > 0 ? [1] : []
     content {
-      delete_on_termination = try(root_block_device.value.delete_on_termination, null)
-      encrypted             = try(root_block_device.value.encrypted, null)
-      iops                  = try(root_block_device.value.iops, null)
-      kms_key_id            = try(root_block_device.value.kms_key_id, null)
-      volume_size           = try(root_block_device.value.volume_size, null)
-      volume_type           = try(root_block_device.value.volume_type, null)
-      throughput            = try(root_block_device.value.throughput, null)
-      tags                  = try(root_block_device.value.tags, null)
+      delete_on_termination = try(var.instance.root_block_device.delete_on_termination, null)
+      encrypted             = try(var.instance.root_block_device.encrypted, null)
+      iops                  = try(var.instance.root_block_device.iops, null)
+      kms_key_id            = try(var.instance.root_block_device.kms_key_id, null)
+      volume_size           = try(var.instance.root_block_device.volume_size, null)
+      volume_type           = try(var.instance.root_block_device.volume_type, null)
+      throughput            = try(var.instance.root_block_device.throughput, null)
+      tags                  = try(var.instance.root_block_device.tags, null)
     }
   }
   dynamic "ebs_block_device" {
@@ -61,7 +61,7 @@ resource "aws_instance" "ami_ignore" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = try(ebs_block_device.value.tags, null)
+      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
@@ -130,12 +130,8 @@ resource "aws_instance" "ami_ignore" {
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
   tags                                 = local.instance_tags
   volume_tags = merge(
-    local.all_tags,
-    local.backup_tags,
-    try(var.instance.volume_extra_tags, {}),
-    {
-      Name = local.name
-    }
+    local.instance_tags,
+    try(var.instance.volume_extra_tags, {})
   )
   timeouts {
     create = try(var.timeouts.create, null)
