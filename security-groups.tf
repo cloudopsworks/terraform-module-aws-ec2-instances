@@ -33,6 +33,13 @@ resource "aws_security_group" "this" {
   }
 }
 
+data "aws_security_group" "source" {
+  for_each = {
+    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false) && try(v.source_security_group, "") != ""
+  }
+  name = each.value.source_security_group
+}
+
 resource "aws_security_group_rule" "this" {
   for_each = {
     for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false)
@@ -46,5 +53,5 @@ resource "aws_security_group_rule" "this" {
   cidr_blocks              = try(each.value.cidr_blocks, null)
   ipv6_cidr_blocks         = try(each.value.ipv6_cidr_blocks, null)
   self                     = try(each.value.self, null)
-  source_security_group_id = try(each.value.source_security_group_id, null)
+  source_security_group_id = try(data.aws_security_group.source[each.key].id, each.value.source_security_group_id, null)
 }
