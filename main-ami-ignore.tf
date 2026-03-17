@@ -13,7 +13,7 @@ resource "aws_instance" "ami_ignore" {
   instance_type               = var.instance.type
   hibernation                 = try(var.instance.hibernation, null)
   user_data                   = try(var.instance.user_data, null)
-  user_data_base64            = try(var.instance.user_data_base64, null)
+  user_data_base64            = try(var.instance.user_data_base64, filebase64(var.instance.user_data_file), null)
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
   key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)
