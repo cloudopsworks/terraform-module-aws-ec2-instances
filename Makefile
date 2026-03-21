@@ -99,3 +99,17 @@ init/azurerm:
 	@rm -f provider.temp.tf
 	@cp .cloudopsworks/boilerplate/azurerm/* .
 	@$(GIT) add .cloudopsworks/.provider *.tf
+
+## Initialize the project for a specific cloud provider: MongoDB Atlas Provider
+init/mongodb:
+	@echo -n "mongodb" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/mongodb/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
+
+## Initialize the project for a specific cloud provider: Github Provider
+init/github:
+	@echo -n "github" > .cloudopsworks/.provider
+	@rm -f provider.temp.tf
+	@cp .cloudopsworks/boilerplate/github/* .
+	@$(GIT) add .cloudopsworks/.provider *.tf
