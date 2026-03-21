@@ -7,5 +7,13 @@
 #     Distributed Under Apache v2.0 License
 #
 
-data "google_project" "current" {}
-data "google_client_config" "current" {}
+terraform {
+  required_version = ">= 1.7"
+  # Complete with required providers for the module
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.59"
+    }
+  }
+}
