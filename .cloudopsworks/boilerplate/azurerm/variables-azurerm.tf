@@ -7,5 +7,8 @@
 #     Distributed Under Apache v2.0 License
 #
 
-data "google_project" "current" {}
-data "google_client_config" "current" {}
+variable "region" {
+  description = "Azure Region to deploy resources into. Example: 'eastus2', defaults to empty string as some of the resources may not require region setting."
+  type        = string
+  default     = ""
+}
