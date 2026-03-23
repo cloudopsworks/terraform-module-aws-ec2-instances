@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -34,9 +34,11 @@ jobs:
           make init
           make readme/deps
           make readme
+      # Create a PR only if not on a pull request event (to avoid error)
       - name: Create Pull Request
         uses: cloudopsworks/create-pull-request@v4
-        with: 
+        if: (github.event_name != 'pull_request')
+        with:
           labels: automated pr
         env:
           token: ${{ secrets.BOT_TOKEN }}
