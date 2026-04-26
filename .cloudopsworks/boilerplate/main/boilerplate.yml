@@ -1,0 +1,51 @@
+##
+# (c) 2021-2026
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
+#
+variables:
+  - name: provider
+    description: "Cloud provider"
+    order: 1
+    type: enum
+    default: "aws"
+    confirm: true
+    options:
+      - "aws"
+      - "azurerm"
+      - "gcp"
+      - "mongodb"
+      - "github"
+      - "hoop"
+
+dependencies:
+  - name: aws
+    template-url: ../aws
+    output-folder: .
+    skip: "{{ ne .provider \"aws\" }}"
+  - name: azurerm
+    template-url: ../azurerm
+    output-folder: .
+    skip: "{{ ne .provider \"azurerm\" }}"
+  - name: gcp
+    template-url: ../gcp
+    output-folder: .
+    skip: "{{ ne .provider \"gcp\" }}"
+  - name: mongodb
+    template-url: ../mongodb
+    output-folder: .
+    skip: "{{ ne .provider \"mongodb\" }}"
+  - name: dot_provider
+    template-url: ../dot_provider
+    output-folder: ./.cloudopsworks
+
+partials:
+  - ../parts/*.tftpl
+
+hooks:
+  after:
+    - command: "{{ templateUrl }}/../scripts/move-tftpl.sh"
+      dir: "{{ outputFolder }}"

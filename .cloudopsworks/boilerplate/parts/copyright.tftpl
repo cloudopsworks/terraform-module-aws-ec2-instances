@@ -1,3 +1,4 @@
+{{- define "copyright" -}}
 ##
 # (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
@@ -6,14 +7,4 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
-
-terraform {
-  required_version = ">= 1.7"
-  # Complete with required providers for the module
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.59"
-    }
-  }
-}
+{{- end -}}

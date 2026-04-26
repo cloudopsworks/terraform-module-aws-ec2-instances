@@ -36,13 +36,18 @@ jobs:
         with:
           blueprint_ref: 'v5.10'
 
+      - name: Get Semver Info
+        id: semver
+        uses: ./bp/cd/semver
+
+
       - name: Perform Release
         uses: ./bp/cd/release
         with:
           source_path: ${{ steps.co.outputs.source_path }}
           ref_name: ${{ github.ref_name }}
           release_tag: ${{ github.ref_name }}
-          is_pre_release: false
+          is_pre_release: ${{ steps.semver.outputs.is_pre_release }}
           files_globs: |
             *.zip
           token: ${{ secrets.BOT_TOKEN }}
