@@ -1,15 +1,20 @@
-##
-# (c) 2021-2026
-#     Cloud Ops Works LLC - https://cloudops.works/
-#     Find us on:
-#       GitHub: https://github.com/cloudopsworks
-#       WebSite: https://cloudops.works
-#     Distributed Under Apache v2.0 License
-#
-
+{{ define "hoop_locals" }}
 locals {
   system_name       = format("%s-%s-%s", lower(var.org.organization_unit), lower(var.org.environment_name), lower(var.org.environment_type))
   system_name_short = format("%s-%s-%s", substr(lower(var.org.organization_unit), 0, 3), substr(lower(var.org.environment_name), 0, 3), substr(lower(var.org.environment_type), 0, 4))
   all_tags          = merge(module.tags.locals.common_tags, var.extra_tags)
   secret_store_path = format("/%s/%s/%s", lower(var.org.organization_unit), lower(var.org.environment_name), lower(var.org.environment_type))
 }
+{{ end }}
+{{ define "hoop_versions" }}
+terraform {
+  required_version = ">= 1.3"
+  # Complete with required providers for the module
+  required_providers {
+    hoop = {
+      source  = "hoophq/hoop"
+      version = "~> 0.0.18"
+    }
+  }
+}
+{{ end }}

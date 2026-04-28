@@ -14,12 +14,15 @@ on:
     branches:
       - main
       - master
-      - develop
     paths:
       - scan.yml
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/terraform.tfvars'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

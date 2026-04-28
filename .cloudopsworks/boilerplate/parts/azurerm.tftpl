@@ -1,12 +1,4 @@
-##
-# (c) 2021-2026
-#     Cloud Ops Works LLC - https://cloudops.works/
-#     Find us on:
-#       GitHub: https://github.com/cloudopsworks
-#       WebSite: https://cloudops.works
-#     Distributed Under Apache v2.0 License
-#
-
+{{ define "azurerm_locals" }}
 locals {
   region_map = {
     asiapacific        = "apac"
@@ -72,3 +64,23 @@ locals {
   all_tags          = merge(module.tags.locals.common_tags, var.extra_tags)
   secret_store_path = format("/%s/%s/%s", lower(var.org.organization_unit), lower(var.org.environment_name), lower(var.org.environment_type))
 }
+{{ end }}
+{{ define "azurerm_versions" }}
+terraform {
+  required_version = ">= 1.7"
+  # Complete with required providers for the module
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.59"
+    }
+  }
+}
+{{ end }}
+{{ define "azurerm_vars" }}
+variable "region" {
+  description = "Azure Region to deploy resources into. Example: 'eastus2', defaults to empty string as some of the resources may not require region setting."
+  type        = string
+  default     = ""
+}
+{{ end }}

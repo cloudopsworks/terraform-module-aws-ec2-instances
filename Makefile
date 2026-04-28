@@ -8,7 +8,6 @@
 #
 SHELL := /bin/bash
 TRONADOR_AUTO_INIT := true
-GITVERSION ?= $(INSTALL_PATH)/gitversion
 PROVIDER ?= $(shell cat .cloudopsworks/.provider 2>/dev/null || echo "aws")
 define PROVIDER_CHOMP_AWS
 provider "aws" {
@@ -38,6 +37,9 @@ export README_DEPS ?= docs/targets.md docs/terraform.md
 
 -include $(shell curl -sSL -o .tronador "https://cowk.io/acc"; echo .tronador)
 
+GITVERSION ?= $(INSTALL_PATH)/gitversion
+BOILERPLATE := $(INSTALL_PATH)/boilerplate
+
 temp_provider:
 ifeq ($(PROVIDER),gcp)
 	echo "$$PROVIDER_CHOMP_GCP" > provider.temp.tf
@@ -46,8 +48,7 @@ else ifeq ($(PROVIDER),aws)
 else ifeq ($(PROVIDER),azurerm)
 	echo "$$PROVIDER_CHOMP_AZURERM" > provider.temp.tf
 else
-	@echo "No valid provider specified. Please set the PROVIDER variable to 'aws' or 'gcp'."
-	@exit 1
+	@echo "Provider not supporting Provider Chomps, skipping..."
 endif
 
 ## Lint terraform/opentofu code
@@ -77,39 +78,11 @@ tag_local: co_master get_version
 tag:: tag_local
 	git push origin -f $(VER_MAJOR).$(VER_MINOR)
 	git push origin -f $(VER_MAJOR)
-	git checkout develop
+	# No develop branch checkout required in GitHub Flow
 
-## Initialize the project for a specific cloud provider: AWS
-init/aws:
-	@echo -n "aws" > .cloudopsworks/.provider
+## Initialize the project for a specific cloud provider: %S
+init/%: packages/install/boilerplate
+	$(eval PROVIDER := $(subst init/,,$@))
 	@rm -f provider.temp.tf
-	@cp .cloudopsworks/boilerplate/aws/* .
-	@$(GIT) add .cloudopsworks/.provider *.tf
-
-## Initialize the project for a specific cloud provider: GCP
-init/gcp:
-	@echo -n "gcp" > .cloudopsworks/.provider
-	@rm -f provider.temp.tf
-	@cp .cloudopsworks/boilerplate/gcp/* .
-	@$(GIT) add .cloudopsworks/.provider *.tf
-
-## Initialize the project for a specific cloud provider: Azure RM
-init/azurerm:
-	@echo -n "azurerm" > .cloudopsworks/.provider
-	@rm -f provider.temp.tf
-	@cp .cloudopsworks/boilerplate/azurerm/* .
-	@$(GIT) add .cloudopsworks/.provider *.tf
-
-## Initialize the project for a specific cloud provider: MongoDB Atlas Provider
-init/mongodb:
-	@echo -n "mongodb" > .cloudopsworks/.provider
-	@rm -f provider.temp.tf
-	@cp .cloudopsworks/boilerplate/mongodb/* .
-	@$(GIT) add .cloudopsworks/.provider *.tf
-
-## Initialize the project for a specific cloud provider: Github Provider
-init/github:
-	@echo -n "github" > .cloudopsworks/.provider
-	@rm -f provider.temp.tf
-	@cp .cloudopsworks/boilerplate/github/* .
+	@$(BOILERPLATE) --template-url .cloudopsworks/boilerplate/main --output-folder . --var "provider=$(PROVIDER)" --disable-dependency-prompt --non-interactive
 	@$(GIT) add .cloudopsworks/.provider *.tf

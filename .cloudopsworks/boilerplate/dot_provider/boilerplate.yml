@@ -6,5 +6,10 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
+variables:
+  - name: provider
+    description: "Cloud provider"
+    type: string
 
-data "aws_region" "current" {}
+partials:
+  - ../parts/*.tftpl

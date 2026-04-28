@@ -6,6 +6,10 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
+variables:
+  - name: provider
+    description: "Cloud provider"
+    type: string
 
-data "google_project" "current" {}
-data "google_client_config" "current" {}
+partials:
+  - ../parts/*.tftpl

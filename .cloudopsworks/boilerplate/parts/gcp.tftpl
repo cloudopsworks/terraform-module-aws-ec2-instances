@@ -1,12 +1,4 @@
-##
-# (c) 2021-2026
-#     Cloud Ops Works LLC - https://cloudops.works/
-#     Find us on:
-#       GitHub: https://github.com/cloudopsworks
-#       WebSite: https://cloudops.works
-#     Distributed Under Apache v2.0 License
-#
-
+{{ define "gcp_locals" }}
 locals {
   region_arr        = split("-", data.google_client_config.current.region)
   region            = format("%s%s%s", lower(local.region_arr[0]), lower(substr(local.region_arr[1], 0, 2)), lower(substr(local.region_arr[1], -1, 1)))
@@ -18,3 +10,20 @@ locals {
   all_tags          = { for k, v in local.std_tags : lower(k) => replace(lower(v), "/[ //@#$+=.]/", "_") }
   secret_store_path = format("/%s/%s/%s", lower(var.org.organization_unit), lower(var.org.environment_name), lower(var.org.environment_type))
 }
+{{ end }}
+{{ define "gcp_versions" }}
+terraform {
+  required_version = ">= 1.7"
+  # Complete with required providers for the module
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 7.0"
+    }
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 7.0"
+    }
+  }
+}
+{{ end }}

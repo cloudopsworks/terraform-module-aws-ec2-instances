@@ -33,3 +33,11 @@ tronador/
 
 provider.temp.tf
 .terraform.lock.hcl
+
+# AI excludes
+.claude/
+.ai/
+.omc/
+.omx/
+.gstack/
+.opencode/
