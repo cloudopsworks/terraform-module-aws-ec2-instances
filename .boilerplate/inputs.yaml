@@ -1,18 +1,139 @@
 # Module configuration
-# Required variables
-{{- range .requiredVariables }}
-{{- if ne .Name "org"}}
-# Description {{ .Description }} , Type: {{ .Type }}
-{{ .Name }}: {{ .DefaultValuePlaceholder }}
-{{- end }}
+# Module-specific inputs only. Terragrunt hierarchy/scaffold supplies org, is_hub, spoke_def, and extra_tags.
 
-{{- end }}
-# Optional variables
-{{- range .optionalVariables }}
-{{- if ne .Name "is_hub" "spoke_def" "extra_args" }}
-# Description {{ .Description }} , Type: {{ .Type }}
-#{{ .Name }}: {{ .DefaultValue }}
-{{- end }}
+name: "" # (Optional) Exact EC2 instance name. Set this or name_prefix. Default: "".
+name_prefix: "" # (Optional) Prefix used to derive the final instance name with the module naming convention. Default: "".
 
-{{- end }}
+instance:
+  create: true # (Optional) Create the EC2 instance resources. Default: true.
+  create_spot: false # (Optional) Launch a Spot instance instead of an on-demand instance. Default: false.
+  ignore_ami_changes: false # (Optional) Ignore subsequent AMI drift after the first create. Default: false.
+  type: "t3.micro" # (Required when instance.create=true) EC2 instance type. Example: "t3.micro". No module default.
+  availability_zone: null # (Optional) Availability Zone for the instance and dedicated host resources. Default: null.
+  hibernation: null # (Optional) Enable EC2 hibernation when the AMI and instance type support it. Default: null.
+  monitoring: null # (Optional) Enable detailed CloudWatch monitoring. Default: null.
+  get_password_data: null # (Optional) Retrieve Windows password data. Default: null.
+  user_data: null # (Optional) Plain-text user data. Default: null.
+  user_data_base64: null # (Optional) Base64-encoded user data. Default: null.
+  user_data_file: null # (Optional) Local file path to base64-encode when using the AMI-ignore workflow. Default: null.
+  user_data_replace_on_change: null # (Optional) Recreate the instance when user data changes. Default: null.
+  source_dest_check: null # (Optional) Enable or disable source/destination checks. Default: null.
+  disable_api_termination: null # (Optional) Protect the instance from API termination. Default: null.
+  disable_api_stop: null # (Optional) Protect the instance from API stop actions. Default: null.
+  instance_initiated_shutdown_behavior: null # (Optional) Behavior after an in-guest shutdown. Valid values: "stop", "terminate". Default: null.
+  placement_group: null # (Optional) Existing placement group name. Default: null.
+  tenancy: null # (Optional) Tenancy model. Valid values: "default", "dedicated", "host". Default: null.
+  host_id: null # (Optional) Existing dedicated host ID to reuse when dedicated_host.enabled=false. Default: null.
+  cpu_credits: null # (Optional) CPU credits mode for burstable families. Valid values: "standard", "unlimited". Default: null.
+  extra_tags: {} # (Optional) Additional tags merged into instance tags. Default: {}.
+  volume_extra_tags: {} # (Optional) Additional tags merged into EBS volume tags. Default: {}.
+  secrets_manager_enabled: true # (Optional) Store generated key material in AWS Secrets Manager when key_pair.create=true. Default: true.
 
+  ami:
+    name: null # (Optional) AMI name lookup. When set, it takes precedence over ami.id. Default: null.
+    id: null # (Optional) Explicit AMI ID. Use this when ami.name is not set. Default: null.
+    architecture: "x86_64" # (Optional) AMI architecture filter for name-based lookups. Common values: "x86_64", "arm64". Default: "x86_64".
+    most_recent: true # (Optional) Select the newest AMI that matches the filters. Default: true.
+    owners: ["self"] # (Optional) AWS account IDs or aliases allowed to own the selected AMI. Default: ["self"].
+    filters: [] # (Optional) Additional aws_ami filters; each item supports name and values. Default: [].
+
+  spot:
+    price: null # (Optional) Maximum Spot price. Default: null.
+    type: "one-time" # (Optional) Spot request type. Valid values: "one-time", "persistent". Default: "one-time".
+    instance_interruption_behavior: null # (Optional) Spot interruption behavior. Valid values: "terminate", "stop", "hibernate". Default: null.
+    valid_until: null # (Optional) RFC3339 expiration timestamp for the Spot request. Default: null.
+
+  dedicated_host:
+    enabled: false # (Optional) Create a dedicated host for non-Spot launches. Default: false.
+    instance_family: null # (Optional) Dedicated host instance family. When null, the module derives it from instance.type. Default: null.
+    host_recovery: null # (Optional) Dedicated host recovery setting. Default: null.
+    auto_placement: null # (Optional) Dedicated host auto placement. Valid values: "on", "off". Default: null.
+
+  key_pair:
+    create: false # (Optional) Generate and register a new AWS key pair. Default: false.
+    name: null # (Optional) Existing or generated key pair name. When create=true and omitted, the module derives the name. Default: null.
+
+  cpu_options:
+    core_count: null # (Optional) Number of CPU cores. Default: null.
+    threads_per_core: null # (Optional) Threads per CPU core. Default: null.
+    amd_sev_snp: null # (Optional) Enable AMD SEV-SNP when supported. Default: null.
+
+  vpc:
+    subnet_id: null # (Required when creating the instance or a managed ENI/security group) Target subnet ID. Default: null.
+    security_group_ids: [] # (Optional) Existing security groups to attach, in addition to a managed security group when enabled. Default: [].
+    associate_public_ip_address: null # (Optional) Assign a public IPv4 address on launch. Default: null.
+    public_eip_id: "" # (Optional) Existing Elastic IP allocation ID to associate after launch when associate_public_ip_address=false. Default: "".
+    private_ip: null # (Optional) Primary private IPv4 address. Default: null.
+    secondary_private_ips: [] # (Optional) Additional private IPv4 addresses. Default: [].
+    ipv6_address_count: null # (Optional) Number of IPv6 addresses to assign. Default: null.
+    ipv6_addresses: [] # (Optional) Explicit IPv6 addresses to assign. Default: [].
+
+  security_group:
+    create: false # (Optional) Create a dedicated security group in the instance subnet VPC. Default: false.
+    rules: {} # (Optional) Map of rule objects. Each rule supports description, type, from_port, to_port, protocol, cidr_blocks, ipv6_cidr_blocks, self, source_security_group, and source_security_group_id. Default: {}.
+
+  network_interface:
+    create: false # (Optional) Create and attach a managed ENI. Default: false.
+    subnet_id: null # (Required when network_interface.create=true) Subnet for the managed ENI. Default: null.
+    private_ips: [] # (Optional) Static private IPv4 addresses for the managed ENI. Default: [].
+    delete_on_termination: null # (Optional) Delete an attached existing ENI on instance termination when create=false. Default: null.
+    network_interface_id: null # (Optional) Existing ENI ID to attach when network_interface.create=false. Default: null.
+
+  root_block_device:
+    volume_size: null # (Optional) Root volume size in GiB. Default: null.
+    volume_type: null # (Optional) Root volume type. Example: "gp3". Default: null.
+    iops: null # (Optional) Root volume provisioned IOPS. Default: null.
+    throughput: null # (Optional) Root volume throughput in MiB/s. Default: null.
+    encrypted: null # (Optional) Encrypt the root volume. Default: null.
+    kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Default: null.
+    delete_on_termination: null # (Optional) Delete the root volume when the instance is terminated. Default: null.
+    tags: {} # (Optional) Additional tags for the root volume. Default: {}.
+
+  ebs:
+    ebs_optimized: null # (Optional) Enable EBS optimization when supported by the instance type. Default: null.
+    block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Default: [].
+
+  ephemeral_block_device: [] # (Optional) Ephemeral devices. Each item supports device_name and optional virtual_name and no_device. Default: [].
+
+  metadata_options:
+    http_endpoint: null # (Optional) IMDS endpoint state. Valid values: "enabled", "disabled". Default: null.
+    http_put_response_hop_limit: null # (Optional) IMDS hop limit. Default: null.
+    http_tokens: null # (Optional) IMDS token requirement. Valid values: "optional", "required". Default: null.
+    instance_metadata_tags: null # (Optional) Expose tags through IMDS. Valid values: "enabled", "disabled". Default: null.
+
+  private_dns_name_options:
+    hostname_type: null # (Optional) Private DNS hostname type. Valid values: "ip-name", "resource-name". Default: null.
+    enable_resource_name_dns_a_record: null # (Optional) Publish A record for the resource name. Default: null.
+    enable_resource_name_dns_aaaa_record: null # (Optional) Publish AAAA record for the resource name. Default: null.
+
+  maintenance_options:
+    auto_recovery: null # (Optional) EC2 auto recovery behavior. Valid values: "default", "disabled". Default: null.
+
+  enclave_options:
+    enabled: null # (Optional) Enable Nitro Enclaves. Default: null.
+
+  capacity_reservation_specification:
+    capacity_reservation_preference: null # (Optional) Capacity reservation preference. Valid values: "open", "none". Default: null.
+    capacity_reservation_target:
+      capacity_reservation_id: null # (Optional) Capacity reservation ID. Default: null.
+      capacity_reservation_resource_group_arn: null # (Optional) Capacity reservation resource group ARN. Default: null.
+
+  backup:
+    enabled: false # (Optional) Apply AWS Backup tagging. Default: false.
+    only_tag: true # (Optional) Only tag the instance for backup selection. Default: true.
+    schedule: "daily" # (Optional) Backup schedule tag. Valid values: "hourly", "daily", "weekly", "monthly". Default: "daily".
+
+timeouts:
+  create: null # (Optional) Terraform create timeout, for example "30m". Default: null.
+  update: null # (Optional) Terraform update timeout, for example "30m". Default: null.
+  delete: null # (Optional) Terraform delete timeout, for example "30m". Default: null.
+
+iam:
+  create: true # (Optional) Create an IAM role and instance profile for the instance. Default: true.
+  instance_profile: null # (Optional) Existing IAM instance profile to use when iam.create=false. Default: null.
+  path: null # (Optional) IAM path for created role and instance profile. Default: null.
+  role_description: null # (Optional) Custom description for the created IAM role. Default: null.
+  permissions_boundary: null # (Optional) IAM permissions boundary ARN for the created role. Default: null.
+  extra_tags: {} # (Optional) Additional tags for IAM resources. Default: {}.
+  role_policies: {} # (Optional) Map of managed policy attachments where the value is a policy ARN. Default: {}.
+  policies: [] # (Optional) Inline IAM policies to create. Each item supports name and statements; statements support sid, effect, actions, resources, principals { type, identifiers }, and conditions { test, variable, values }. Default: [].
