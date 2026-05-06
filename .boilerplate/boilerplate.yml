@@ -1,43 +1,28 @@
 ##
-# (c) 2025 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2026
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
+# Terragrunt Boilerplate Configuration
 variables:
   # Generic Boilerplate Variables Setup
-  - name: organization_name
-    order: 0
-    description: "Organization Name"
-    type: string
-    default: "Organization"
-  - name: organization_unit
-    order: 1
-    description: "Organization Unit"
-    type: string
-    default: "Unit"
-  - name: environment_name
-    order: 2
-    description: "Environment Name"
-    type: string
-    default: "DEV"
-  - name: environment_type
-    order: 3
-    description: "Environment Type"
-    type: string
-    default: "Testing"
-  - name: hub_spoke
-    order: 4
-    description: "Hub and Spoke architecture"
-    type: bool
-    default: false
   - name: is_hub
-    order: 5
+    order: 0
     description: "Is this a hub configuration?"
     type: bool
     default: false
   - name: tags
-    order: 6
+    order: 1
     description: "Tags"
     type: map
     default: {}
   # End - Generic Boilerplate Variables Setup
+
+hooks:
+  after:
+    - command: "git"
+      args: ["add", "terragrunt.hcl", "inputs.yaml", "local-tags.json"]
+      dir: "{{ outputFolder }}"
