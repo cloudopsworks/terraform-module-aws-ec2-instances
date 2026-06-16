@@ -12,16 +12,22 @@ on:
     types: 
       - opened
       - reopened
+  issues:
+    types:
+      - opened
+      - reopened
 
+# The action assigns PR reviewers on pull_request events and issue authors on issues events.
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
-  reviewers:
+  assignments:
     runs-on: ubuntu-latest
     steps:
-      - uses: cloudopsworks/auto-assign@v1.2.1
+      - uses: cloudopsworks/auto-assign@v3.0.2
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: '.cloudopsworks/auto-assign.yml'

@@ -94,8 +94,8 @@ Module versioning follows GitHub Flow — a simplified branching model where fea
 - Avoid in the commit comments explicitly mentioning `+semver:` changes within changesets, describe it with other words. The semver annotations should only be present in commit messages and PR descriptions to trigger the correct version bump in CI.
 - Avoid scrubbing into Makefile or tronador utility scripts.
 - Use `make` targets whenever available for branch and release operations.
-- Use `gh` cli for PR merging and release management.
-  - When waiting for a PR status check to pass, use `gh pr checks <number> --watch`
+- Use `gh` cli for PR merging and release management. If the `github-mcp-server` MCP is available in your environment, prefer its tools over the `gh` CLI for all GitHub operations (PR creation, merging, status checks, issue management).
+  - When waiting for a PR status check to pass, use `gh pr checks <number> --watch` (or the equivalent `github-mcp-server` MCP tool if available)
 - Plan consistently and thoroughly before starting any work.
 
 ### Semver Commit Annotations
@@ -169,6 +169,8 @@ Workflow upgrades and documentation-only fixes are patch-level changes and use t
 5. Wait for all CI checks to pass, then merge with `gh` CLI (see [PR Merge Guidelines](#pr-merge-guidelines)).
 
 ### PR Merge Guidelines
+
+> **Note:** If the `github-mcp-server` MCP is available in your environment, prefer its tools (e.g., `merge_pull_request`, `get_pull_request`, `list_pull_request_commits`) over the `gh` CLI commands below. The MCP server provides structured responses and integrates directly with the agent workflow.
 
 After all CI checks pass, merge using `gh pr merge` with a proper merge commit:
 
@@ -297,6 +299,7 @@ The `.boilerplate/inputs.yaml` file is the per-deployment configuration file loa
   - A short description
   - The default value and any notes on valid values or format
   - Example values where helpful
+  - **Avoid** embedding any go-template syntax, for example, do not include `{{ env "ORG" }}` in the comment. Instead, describe the expected value and source (e.g., "Organization ID, sourced from env-inputs.yaml").
 - **Complex objects**: Expand all sub-keys of object variables (e.g., `settings`) as commented lines, even when the default is `{}`. This makes all available options visible to the operator without them needing to read the Terraform source.
 - **Module transformations**: If the module transforms an input value before passing it to the provider (e.g., converting a region string to uppercase-underscore format for the Atlas API), document both the expected input format and the resulting API value in the comment.
 - **Sync on change**: Whenever a variable is added, removed, or modified in `variables-*.tf`, update `.boilerplate/inputs.yaml` accordingly in the same commit.

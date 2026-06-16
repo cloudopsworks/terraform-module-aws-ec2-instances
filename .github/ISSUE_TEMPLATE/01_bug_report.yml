@@ -1,0 +1,91 @@
+name: Bug Report
+description: Report unexpected behavior in the module — resources, outputs, variables, or provider behavior.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please be as specific as possible — it speeds up the fix significantly.
+
+  - type: input
+    id: module_version
+    attributes:
+      label: Module version
+      description: >
+        The version of the module. Found in `.cloudopsworks/_VERSION`, the registry tag,
+        or the `source` version constraint in the calling configuration.
+      placeholder: "e.g. v1.4.2"
+    validations:
+      required: true
+
+  - type: input
+    id: terraform_version
+    attributes:
+      label: Terraform / OpenTofu version
+      placeholder: "e.g. Terraform 1.9.2 / OpenTofu 1.8.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the module is affected?
+      options:
+        - Module resources / outputs
+        - Variable / input handling
+        - State management
+        - Provider configuration
+        - Module composition / dependencies
+        - Examples
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal configuration that reliably triggers the bug.
+      placeholder: |
+        1. Call module with inputs: { ... }
+        2. Run `terraform plan`
+        3. Observe unexpected resource diff / error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include relevant plan/apply output or error messages. Do **not** paste secrets or credentials.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: >
+        Relevant variable values (redacted), provider version, a `terraform show` excerpt,
+        or a link to a related issue.
+    validations:
+      required: false
