@@ -1,0 +1,109 @@
+name: CI/CD / Pipeline Issue
+description: Report a problem with the module's CI/CD pipeline, registry publishing, or testing infrastructure.
+title: "[Infra]: "
+labels: ["infrastructure", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for pipeline failures, registry publishing problems, or testing infrastructure issues.
+        For bugs in the module's Terraform behavior, use the **Bug Report** template instead.
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Affected environment
+      options:
+        - dev
+        - uat
+        - prod
+        - preview / PR environment
+        - All environments
+        - Local / make target
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: registry_backend
+    attributes:
+      label: Registry / remote backend target
+      options:
+        - Terraform Registry (registry.terraform.io)
+        - OpenTofu Registry
+        - Private registry / module source
+        - Remote state — S3 / DynamoDB
+        - Remote state — Azure Storage
+        - Remote state — GCS
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Affected workflow
+      description: Which GitHub Actions workflow is failing or misbehaving?
+      options:
+        - main-build.yml
+        - pr-build.yml
+        - deploy.yml
+        - scan.yml
+        - automerge.yml
+        - slash-commands.yml
+        - environment-destroy.yml
+        - environment-unlock.yml
+        - jira-integration.yml
+        - make target (local)
+        - Not a workflow issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What went wrong? Describe the failure clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: What triggered the issue?
+      description: The branch, event, or action that caused the problem.
+      placeholder: |
+        - Pushed to release/v2.1.0
+        - Opened a PR from feature/my-feature → develop
+        - Ran `make test` locally
+    validations:
+      required: true
+
+  - type: input
+    id: run_url
+    attributes:
+      label: Workflow run URL
+      description: Link to the failed GitHub Actions run, if applicable.
+      placeholder: "https://github.com/org/repo/actions/runs/..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: >
+        Paste the key error lines from the workflow log or test output.
+        Do **not** include secrets, credentials, or sensitive state values.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+    validations:
+      required: false
