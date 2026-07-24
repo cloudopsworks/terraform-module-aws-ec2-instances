@@ -32,7 +32,7 @@ instance:
 
   # cloudwatch_agent:
   #   enabled: false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
-  #   attach_managed_policies: true # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+  #   attach_managed_policies: true # (Optional) Attach CloudWatchAgentServerPolicy when iam.create=true; AmazonSSMManagedInstanceCore is provided by iam.ssm_enabled by default and skipped here to avoid duplicate attachments. Default: true.
   #   tag_key: "CloudWatchAgent" # (Optional) Tag key used when tag-based SSM targeting is selected. Default: "CloudWatchAgent".
   #   tag_value: "enabled" # (Optional) Tag value used when tag-based SSM targeting is selected. Default: "enabled".
   #   ssm_managed_policy_arn: null # (Optional) Override SSM managed instance policy ARN. Default: AWS AmazonSSMManagedInstanceCore partition-aware ARN.
@@ -167,9 +167,10 @@ instance:
 # iam:
 #   create: true # (Optional) Create an IAM role and instance profile for the instance. Default: true.
 #   instance_profile: null # (Optional) Existing IAM instance profile to use when iam.create=false. Default: null.
+#   ssm_enabled: true # (Optional) Attach AmazonSSMManagedInstanceCore to the created IAM role. Set false only when an equivalent policy is supplied separately. Default: true.
 #   path: null # (Optional) IAM path for created role and instance profile. Default: null.
 #   role_description: null # (Optional) Custom description for the created IAM role. Default: null.
 #   permissions_boundary: null # (Optional) IAM permissions boundary ARN for the created role. Default: null.
 #   extra_tags: {} # (Optional) Additional tags for IAM resources. Default: {}.
-#   role_policies: {} # (Optional) Map of managed policy attachments where the value is a policy ARN. Default: {}.
+#   role_policies: {} # (Optional) Map of additional managed policy attachments where the value is a policy ARN; AmazonSSMManagedInstanceCore is attached by iam.ssm_enabled by default. Default: {}.
 #   policies: [] # (Optional) Inline IAM policies to create. Each item supports name and statements; statements support sid, effect, actions, resources, principals { type, identifiers }, and conditions { test, variable, values }. Default: [].

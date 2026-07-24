@@ -93,7 +93,7 @@ variable "name_prefix" {
 #   tenancy: "default" | "dedicated" # defaults to null
 #   cloudwatch_agent:
 #     enabled: true | false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
-#     attach_managed_policies: true | false # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+#     attach_managed_policies: true | false # (Optional) Attach CloudWatchAgentServerPolicy when iam.create=true; AmazonSSMManagedInstanceCore is provided by iam.ssm_enabled by default and skipped here to avoid duplicate attachments. Default: true.
 #     tag_key: "CloudWatchAgent" # (Optional) Tag key used when tag-based SSM targeting is selected. Default: "CloudWatchAgent".
 #     tag_value: "enabled" # (Optional) Tag value used when tag-based SSM targeting is selected. Default: "enabled".
 #     ssm_managed_policy_arn: "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" # (Optional) Override SSM managed instance policy ARN.
@@ -235,6 +235,7 @@ variable "timeouts" {
 #   iam:
 #     create: true | false # defaults to false
 #     instance_profile: "instance-profile" # defaults to null
+#     ssm_enabled: true | false # defaults to true; attaches AmazonSSMManagedInstanceCore to the created IAM role
 variable "iam" {
   description = "The IAM role to use for the EC2 Instance"
   type        = any

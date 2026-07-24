@@ -124,7 +124,7 @@ instance:
 
   # cloudwatch_agent:
   #   enabled: false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
-  #   attach_managed_policies: true # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+  #   attach_managed_policies: true # (Optional) Attach CloudWatchAgentServerPolicy when iam.create=true; AmazonSSMManagedInstanceCore is provided by iam.ssm_enabled by default and skipped here to avoid duplicate attachments. Default: true.
   #   tag_key: "CloudWatchAgent" # (Optional) Tag key used when tag-based SSM targeting is selected. Default: "CloudWatchAgent".
   #   tag_value: "enabled" # (Optional) Tag value used when tag-based SSM targeting is selected. Default: "enabled".
   #   ssm_managed_policy_arn: null # (Optional) Override SSM managed instance policy ARN. Default: AWS AmazonSSMManagedInstanceCore partition-aware ARN.
@@ -259,11 +259,12 @@ instance:
 # iam:
 #   create: true # (Optional) Create an IAM role and instance profile for the instance. Default: true.
 #   instance_profile: null # (Optional) Existing IAM instance profile to use when iam.create=false. Default: null.
+#   ssm_enabled: true # (Optional) Attach AmazonSSMManagedInstanceCore to the created IAM role. Set false only when an equivalent policy is supplied separately. Default: true.
 #   path: null # (Optional) IAM path for created role and instance profile. Default: null.
 #   role_description: null # (Optional) Custom description for the created IAM role. Default: null.
 #   permissions_boundary: null # (Optional) IAM permissions boundary ARN for the created role. Default: null.
 #   extra_tags: {} # (Optional) Additional tags for IAM resources. Default: {}.
-#   role_policies: {} # (Optional) Map of managed policy attachments where the value is a policy ARN. Default: {}.
+#   role_policies: {} # (Optional) Map of additional managed policy attachments where the value is a policy ARN; AmazonSSMManagedInstanceCore is attached by iam.ssm_enabled by default. Default: {}.
 #   policies: [] # (Optional) Inline IAM policies to create. Each item supports name and statements; statements support sid, effect, actions, resources, principals { type, identifiers }, and conditions { test, variable, values }. Default: [].
 ```
 
@@ -332,14 +333,14 @@ Common deployment patterns for this module include:
 2. **Spot capacity for cost-sensitive workloads**
    - Set `instance.create_spot = true` and tune `instance.spot.price`, `instance.spot.type`, and `instance.spot.instance_interruption_behavior`.
 3. **Managed access layer**
-   - Enable `instance.key_pair.create`, keep `instance.secrets_manager_enabled = true`, and add `iam.role_policies` such as `AmazonSSMManagedInstanceCore`.
+   - Enable `instance.key_pair.create`, keep `instance.secrets_manager_enabled = true`, and keep `iam.ssm_enabled = true` (the default) for SSM access.
 4. **Dedicated host placement**
    - Set `instance.dedicated_host.enabled = true` for non-Spot launches, or provide `instance.host_id` to reuse an existing host.
 5. **Private subnet with controlled ingress**
    - Set `instance.vpc.associate_public_ip_address = false`, attach existing security groups through `instance.vpc.security_group_ids`, or enable `instance.security_group.create` and define explicit rules.
 6. **CloudWatch Agent rollout**
    - Set `instance.cloudwatch_agent.enabled = true` to install the agent through SSM State Manager.
-   - Keep `iam.create = true` and `instance.cloudwatch_agent.attach_managed_policies = true` to attach the SSM and CloudWatch agent managed policies automatically, or provide an equivalent existing instance profile.
+   - Keep `iam.create = true`, `iam.ssm_enabled = true`, and `instance.cloudwatch_agent.attach_managed_policies = true` to attach the SSM and CloudWatch agent managed policies automatically without duplicating `AmazonSSMManagedInstanceCore`, or provide an equivalent existing instance profile.
    - Set `instance.cloudwatch_agent.configure.enabled = true` and provide `config` or `config_json` to store a CloudWatch agent configuration in Parameter Store and start the agent with `AmazonCloudWatch-ManageAgent`.
    - Set `instance.cloudwatch_agent.workload_detection.enabled = true` to add opt-in tags for CloudWatch's tag-based workload-detection deployment. The account-level workload detection setting is managed in CloudWatch, not by this module.
 
@@ -395,6 +396,7 @@ Available targets:
 | [aws_iam_role_policy.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy_attachment.cloudwatch_agent_server](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.cloudwatch_agent_ssm_core](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.ssm_managed_instance_core](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_instance.ami_ignore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
 | [aws_instance.spot](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
