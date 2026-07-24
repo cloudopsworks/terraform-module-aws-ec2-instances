@@ -20,10 +20,17 @@ locals {
       Name = local.name
     }
   )
+  manage_primary_network_interface = try(var.instance.network_interface.create, false)
   attach_existing_network_interface = (
     !try(var.instance.network_interface.create, false)
     && try(trimspace(var.instance.network_interface.network_interface_id), "") != ""
   )
+  attach_primary_network_interface              = local.manage_primary_network_interface || local.attach_existing_network_interface
+  instance_metadata_options                     = coalesce(try(var.instance.metadata_options, null), {})
+  instance_metadata_http_endpoint               = coalesce(try(local.instance_metadata_options.http_endpoint, null), "enabled")
+  instance_metadata_http_put_response_hop_limit = try(local.instance_metadata_options.http_put_response_hop_limit, null)
+  instance_metadata_http_tokens                 = "required"
+  instance_metadata_tags                        = coalesce(try(local.instance_metadata_options.instance_metadata_tags, null), "disabled")
 }
 
 data "aws_ami" "this" {
@@ -78,13 +85,13 @@ resource "aws_instance" "this" {
     }
   }
   availability_zone           = try(var.instance.availability_zone, null)
-  vpc_security_group_ids      = try(var.instance.security_group.create, false) ? concat([aws_security_group.this[0].id], try(var.instance.vpc.security_group_ids, [])) : try(var.instance.vpc.security_group_ids, null)
-  associate_public_ip_address = try(var.instance.vpc.associate_public_ip_address, null)
-  subnet_id                   = try(var.instance.vpc.subnet_id, null)
-  private_ip                  = try(var.instance.vpc.private_ip, null)
-  secondary_private_ips       = try(var.instance.vpc.secondary_private_ips, null)
-  ipv6_address_count          = try(var.instance.vpc.ipv6_address_count, null)
-  ipv6_addresses              = try(var.instance.vpc.ipv6_addresses, null)
+  vpc_security_group_ids      = local.attach_primary_network_interface ? null : (try(var.instance.security_group.create, false) ? concat([aws_security_group.this[0].id], try(var.instance.vpc.security_group_ids, [])) : try(var.instance.vpc.security_group_ids, null))
+  associate_public_ip_address = local.attach_primary_network_interface ? null : try(var.instance.vpc.associate_public_ip_address, null)
+  subnet_id                   = local.attach_primary_network_interface ? null : try(var.instance.vpc.subnet_id, null)
+  private_ip                  = local.attach_primary_network_interface ? null : try(var.instance.vpc.private_ip, null)
+  secondary_private_ips       = local.attach_primary_network_interface ? null : try(var.instance.vpc.secondary_private_ips, null)
+  ipv6_address_count          = local.attach_primary_network_interface ? null : try(var.instance.vpc.ipv6_address_count, null)
+  ipv6_addresses              = local.attach_primary_network_interface ? null : try(var.instance.vpc.ipv6_addresses, null)
   ebs_optimized               = try(var.instance.ebs.ebs_optimized, null)
   dynamic "root_block_device" {
     for_each = length(try(var.instance.root_block_device, {})) > 0 ? [1] : []
@@ -122,20 +129,16 @@ resource "aws_instance" "this" {
       virtual_name = try(ephemeral_block_device.value.virtual_name, null)
     }
   }
-  dynamic "metadata_options" {
-    for_each = length(try(var.instance.metadata_options, {})) > 0 ? [var.instance.metadata_options] : []
-    content {
-      http_endpoint               = try(metadata_options.value.http_endpoint, null)
-      http_put_response_hop_limit = try(metadata_options.value.http_put_response_hop_limit, null)
-      http_tokens                 = try(metadata_options.value.http_tokens, null)
-      instance_metadata_tags      = try(metadata_options.value.instance_metadata_tags, null)
-    }
+  metadata_options {
+    http_endpoint               = local.instance_metadata_http_endpoint
+    http_put_response_hop_limit = local.instance_metadata_http_put_response_hop_limit
+    http_tokens                 = local.instance_metadata_http_tokens
+    instance_metadata_tags      = local.instance_metadata_tags
   }
   dynamic "primary_network_interface" {
-    for_each = local.attach_existing_network_interface ? [1] : []
+    for_each = local.attach_primary_network_interface ? [1] : []
     content {
-      delete_on_termination = try(var.instance.network_interface.delete_on_termination, null)
-      network_interface_id  = var.instance.network_interface.network_interface_id
+      network_interface_id = local.manage_primary_network_interface ? aws_network_interface.this[0].id : var.instance.network_interface.network_interface_id
     }
   }
   dynamic "private_dns_name_options" {
@@ -171,7 +174,7 @@ resource "aws_instance" "this" {
       }
     }
   }
-  source_dest_check                    = try(var.instance.source_dest_check, null)
+  source_dest_check                    = local.attach_primary_network_interface ? null : try(var.instance.source_dest_check, null)
   disable_api_termination              = try(var.instance.disable_api_termination, null)
   disable_api_stop                     = try(var.instance.disable_api_stop, null)
   instance_initiated_shutdown_behavior = try(var.instance.instance_initiated_shutdown_behavior, null)
@@ -195,9 +198,9 @@ resource "aws_instance" "this" {
 
 resource "aws_eip_association" "this" {
   count                = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && !try(var.instance.create_spot, false) && !try(var.instance.vpc.associate_public_ip_address, false) && try(var.instance.vpc.public_eip_id, "") != "" ? 1 : 0
-  instance_id          = aws_instance.this[0].id
+  instance_id          = local.manage_primary_network_interface ? null : aws_instance.this[0].id
   allocation_id        = var.instance.vpc.public_eip_id
-  network_interface_id = try(var.instance.network_interface.create, false) ? aws_network_interface.this[0].id : null
+  network_interface_id = local.manage_primary_network_interface ? aws_network_interface.this[0].id : null
 }
 
 resource "aws_ec2_tag" "this_eni" {

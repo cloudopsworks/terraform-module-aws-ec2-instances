@@ -58,12 +58,11 @@ variable "name_prefix" {
 #     ipv6_addresses: ["ipv6-address"] # defaults to null
 #   network_interface:
 #     create: true | false # defaults to false
-#     # Required if crate is true
+#     # Required if create is true
 #     subnet_id: "subnet-id" # defaults to null
 #     private_ips: ["private-ip"] # defaults to null
-#     # Optionals if create is false
-#     delete_on_termination: true | false # defaults to null
-#     network_interface_id: "eni-id" # defaults to null
+#     # Optional if create is false
+#     network_interface_id: "eni-id" # defaults to null; mutually exclusive with create_spot, security_group.create, source_dest_check, and instance.vpc networking fields
 #   root_block_device:
 #     volume_size: 8 # defaults to null
 #     volume_type: "gp3" # defaults to null
@@ -87,21 +86,21 @@ variable "name_prefix" {
 #       no_device: true
 #   metadata_options:
 #     http_endpoint: "enabled" | "disabled" # defaults to "enabled"
-#     http_tokens: "required" | "optional" # defaults to "optional"
-#     http_put_response_hop_limit: 1 # defaults to null
-#     instance_metadata_tags: "enabled" | "disabled" # defaults to "enabled"
+#     http_tokens: "required" # defaults to "required" and enforces IMDSv2; "optional" is rejected
+#     http_put_response_hop_limit: 1 # defaults to null; valid range 1 through 64
+#     instance_metadata_tags: "enabled" | "disabled" # defaults to "disabled"
 #   placement_group: "placement-group" # defaults to null
 #   tenancy: "default" | "dedicated" # defaults to null
 #   cloudwatch_agent:
 #     enabled: true | false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
 #     attach_managed_policies: true | false # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
-#     tag_key: "CloudWatchAgent" # (Optional) Tag key used by SSM State Manager association targets. Default: "CloudWatchAgent".
-#     tag_value: "enabled" # (Optional) Tag value used by SSM State Manager association targets. Default: "enabled".
+#     tag_key: "CloudWatchAgent" # (Optional) Tag key used when tag-based SSM targeting is selected. Default: "CloudWatchAgent".
+#     tag_value: "enabled" # (Optional) Tag value used when tag-based SSM targeting is selected. Default: "enabled".
 #     ssm_managed_policy_arn: "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" # (Optional) Override SSM managed instance policy ARN.
 #     server_managed_policy_arn: "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy" # (Optional) Override CloudWatch agent server policy ARN.
 #     target:
-#       key: "tag:CloudWatchAgent" # (Optional) SSM target key. Use "InstanceIds" or "tag:<TagKey>". Default: "tag:<tag_key>".
-#       values: ["enabled"] # (Optional) SSM target values. Default: [tag_value].
+#       key: "InstanceIds" # (Optional) SSM target key. Use "InstanceIds" or "tag:<TagKey>". Default: "InstanceIds".
+#       values: ["i-0123456789abcdef0"] # (Optional) SSM target values. Default: created instance ID when key is "InstanceIds", otherwise [tag_value].
 #     install:
 #       enabled: true | false # (Optional) Create AWS-ConfigureAWSPackage association to install AmazonCloudWatchAgent. Default: true.
 #       document_name: "AWS-ConfigureAWSPackage" # (Optional) SSM document used to install the package.
@@ -136,6 +135,95 @@ variable "instance" {
   description = "The instance type to use for the EC2 Instance"
   type        = any
   default     = {}
+
+  validation {
+    condition = (
+      coalesce(try(var.instance.metadata_options.http_endpoint, null), "enabled") == "enabled"
+      || coalesce(try(var.instance.metadata_options.http_endpoint, null), "enabled") == "disabled"
+    )
+    error_message = "instance.metadata_options.http_endpoint must be either \"enabled\" or \"disabled\" when provided."
+  }
+
+  validation {
+    condition     = coalesce(try(var.instance.metadata_options.http_tokens, null), "required") == "required"
+    error_message = "instance.metadata_options.http_tokens is enforced as \"required\" for IMDSv2; omit it or set it to \"required\"."
+  }
+
+  validation {
+    condition = (
+      try(var.instance.metadata_options.http_put_response_hop_limit == null, true)
+      || try(
+        var.instance.metadata_options.http_put_response_hop_limit >= 1
+        && var.instance.metadata_options.http_put_response_hop_limit <= 64,
+        false
+      )
+    )
+    error_message = "instance.metadata_options.http_put_response_hop_limit must be null or a value from 1 through 64."
+  }
+
+  validation {
+    condition = (
+      coalesce(try(var.instance.metadata_options.instance_metadata_tags, null), "disabled") == "enabled"
+      || coalesce(try(var.instance.metadata_options.instance_metadata_tags, null), "disabled") == "disabled"
+    )
+    error_message = "instance.metadata_options.instance_metadata_tags must be either \"enabled\" or \"disabled\" when provided."
+  }
+
+  validation {
+    condition = (
+      try(trimspace(var.instance.network_interface.network_interface_id), "") == ""
+      || (
+        !try(var.instance.network_interface.create, false)
+        && !try(var.instance.create_spot, false)
+        && !try(var.instance.security_group.create, false)
+        && try(var.instance.vpc.subnet_id, null) == null
+        && try(var.instance.vpc.private_ip, null) == null
+        && length(coalesce(try(var.instance.vpc.secondary_private_ips, null), [])) == 0
+        && length(coalesce(try(var.instance.vpc.security_group_ids, null), [])) == 0
+        && try(var.instance.vpc.associate_public_ip_address, null) == null
+        && try(var.instance.vpc.ipv6_address_count, null) == null
+        && length(coalesce(try(var.instance.vpc.ipv6_addresses, null), [])) == 0
+        && try(var.instance.vpc.public_eip_id == null || var.instance.vpc.public_eip_id == "", true)
+        && try(var.instance.source_dest_check, null) == null
+      )
+    )
+    error_message = "When instance.network_interface.network_interface_id is set for an existing primary ENI, do not set create_spot, security_group.create, source_dest_check, or top-level instance.vpc networking fields such as subnet_id, private_ip, security_group_ids, public IP, EIP, or IPv6 options."
+  }
+
+  validation {
+    condition = (
+      !try(var.instance.network_interface.create, false)
+      || (
+        !try(var.instance.create_spot, false)
+        && try(var.instance.network_interface.subnet_id, null) != null
+        && try(var.instance.network_interface.network_interface_id, null) == null
+        && try(var.instance.vpc.subnet_id, null) == null
+        && try(var.instance.vpc.private_ip, null) == null
+        && length(coalesce(try(var.instance.vpc.secondary_private_ips, null), [])) == 0
+        && try(var.instance.vpc.associate_public_ip_address, null) == null
+        && try(var.instance.vpc.ipv6_address_count, null) == null
+        && length(coalesce(try(var.instance.vpc.ipv6_addresses, null), [])) == 0
+      )
+    )
+    error_message = "When instance.network_interface.create=true, set instance.network_interface.subnet_id and do not set create_spot, network_interface_id, or top-level instance.vpc launch fields such as subnet_id, private_ip, public IP, or IPv6 options. Use network_interface.private_ips for static private IPv4 addresses."
+  }
+
+  validation {
+    condition = (
+      try(var.instance.cloudwatch_agent.target.key, null) == null
+      || try(var.instance.cloudwatch_agent.target.key == "InstanceIds", false)
+      || try(startswith(var.instance.cloudwatch_agent.target.key, "tag:"), false)
+    )
+    error_message = "instance.cloudwatch_agent.target.key must be \"InstanceIds\" or \"tag:<TagKey>\" when provided."
+  }
+
+  validation {
+    condition = (
+      try(var.instance.cloudwatch_agent.configure.restart, null) == null
+      || try(contains(["yes", "no"], var.instance.cloudwatch_agent.configure.restart), false)
+    )
+    error_message = "instance.cloudwatch_agent.configure.restart must be \"yes\" or \"no\" when provided."
+  }
 }
 
 variable "timeouts" {

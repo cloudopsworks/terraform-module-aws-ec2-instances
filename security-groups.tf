@@ -8,12 +8,12 @@
 #
 
 data "aws_subnet" "this" {
-  count = try(var.instance.create, true) ? 1 : 0
-  id    = var.instance.vpc.subnet_id
+  count = try(var.instance.create, true) && try(var.instance.security_group.create, false) && !local.attach_existing_network_interface ? 1 : 0
+  id    = try(coalesce(try(var.instance.vpc.subnet_id, null), try(var.instance.network_interface.subnet_id, null)), null)
 }
 
 resource "aws_security_group" "this" {
-  count       = try(var.instance.create, true) && try(var.instance.security_group.create, false) ? 1 : 0
+  count       = try(var.instance.create, true) && try(var.instance.security_group.create, false) && !local.attach_existing_network_interface ? 1 : 0
   name        = "${local.name}-sg"
   description = "Security group for ${local.name} access to any resource"
   vpc_id      = data.aws_subnet.this[0].vpc_id
@@ -35,14 +35,14 @@ resource "aws_security_group" "this" {
 
 data "aws_security_group" "source" {
   for_each = {
-    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false) && try(v.source_security_group, "") != ""
+    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false) && !local.attach_existing_network_interface && try(v.source_security_group, "") != ""
   }
   name = each.value.source_security_group
 }
 
 resource "aws_security_group_rule" "this" {
   for_each = {
-    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false)
+    for k, v in try(var.instance.security_group.rules, {}) : k => v if try(var.instance.create, true) && try(var.instance.security_group.create, false) && !local.attach_existing_network_interface
   }
   security_group_id        = aws_security_group.this[0].id
   description              = try(each.value.description, "Rule for ${local.name} access")

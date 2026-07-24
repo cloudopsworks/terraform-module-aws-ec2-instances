@@ -30,8 +30,8 @@ locals {
     (local.cloudwatch_agent_workload_detection_tag_key) = local.cloudwatch_agent_workload_detection_tag_value
   } : {}
 
-  cloudwatch_agent_target_key    = coalesce(try(local.cloudwatch_agent_settings.target.key, null), "tag:${local.cloudwatch_agent_rollout_tag_key}")
-  cloudwatch_agent_target_values = length(coalesce(try(local.cloudwatch_agent_settings.target.values, null), [])) > 0 ? local.cloudwatch_agent_settings.target.values : [local.cloudwatch_agent_rollout_tag_value]
+  cloudwatch_agent_target_key    = coalesce(try(local.cloudwatch_agent_settings.target.key, null), "InstanceIds")
+  cloudwatch_agent_target_values = length(coalesce(try(local.cloudwatch_agent_settings.target.values, null), [])) > 0 ? local.cloudwatch_agent_settings.target.values : (local.cloudwatch_agent_target_key == "InstanceIds" ? [local.ec2_instance_id] : [local.cloudwatch_agent_rollout_tag_value])
 
   cloudwatch_agent_ssm_core_policy_arn = coalesce(try(
     local.cloudwatch_agent_settings.ssm_managed_policy_arn,
