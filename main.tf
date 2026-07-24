@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -13,6 +13,8 @@ locals {
   instance_tags = merge(
     local.all_tags,
     local.backup_tags,
+    local.cloudwatch_agent_rollout_tags,
+    local.cloudwatch_agent_workload_detection_tags,
     try(var.instance.extra_tags, {}),
     {
       Name = local.name

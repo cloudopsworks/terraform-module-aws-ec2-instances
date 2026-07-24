@@ -16,6 +16,7 @@
 Opinionated Terraform module for provisioning and managing Amazon EC2 instances at scale.
 It standardizes AMI discovery, instance types, networking, IAM, storage, and backups
 behind a simple, predictable input schema. Optional capabilities include Spot requests,
+CloudWatch Agent installation through SSM State Manager, workload-detection opt-in tags,
 automatic key pair and security group creation, dedicated host support, and sensible
 tagging — keeping EC2 deployments consistent, auditable, and reproducible across environments.
 
@@ -50,7 +51,7 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 This module provides a straightforward, opinionated way to create and manage EC2 instances
 in AWS. It supports on-demand and Spot instances, AMI discovery, flexible networking,
 IAM integration, storage configuration, optional automatic key pair and security group
-creation, and dedicated host placement.
+creation, dedicated host placement, and optional CloudWatch Agent rollout via AWS Systems Manager.
 
 The module expects an org object to drive consistent naming and tagging across resources.
 Managing instances as code with Terraform (and Terragrunt) enables reviewable changes,
@@ -119,6 +120,42 @@ instance:
   extra_tags: {} # (Optional) Additional tags merged into instance tags. Default: {}.
   volume_extra_tags: {} # (Optional) Additional tags merged into EBS volume tags. Default: {}.
   secrets_manager_enabled: true # (Optional) Store generated key material in AWS Secrets Manager when key_pair.create=true. Default: true.
+
+  cloudwatch_agent:
+    enabled: false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
+    attach_managed_policies: true # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+    tag_key: "CloudWatchAgent" # (Optional) Tag key used by SSM State Manager association targets. Default: "CloudWatchAgent".
+    tag_value: "enabled" # (Optional) Tag value used by SSM State Manager association targets. Default: "enabled".
+    ssm_managed_policy_arn: null # (Optional) Override SSM managed instance policy ARN. Default: AWS AmazonSSMManagedInstanceCore partition-aware ARN.
+    server_managed_policy_arn: null # (Optional) Override CloudWatch agent server policy ARN. Default: AWS CloudWatchAgentServerPolicy partition-aware ARN.
+    target:
+      key: null # (Optional) SSM target key. Use "InstanceIds" or "tag:<TagKey>". Default: "tag:<cloudwatch_agent.tag_key>".
+      values: [] # (Optional) SSM target values. Default: [cloudwatch_agent.tag_value].
+    install:
+      enabled: true # (Optional) Create AWS-ConfigureAWSPackage association to install AmazonCloudWatchAgent. Default: true.
+      document_name: "AWS-ConfigureAWSPackage" # (Optional) SSM document used to install the package. Default: "AWS-ConfigureAWSPackage".
+      association_name: null # (Optional) Custom installation association name, truncated to 128 characters. Default: "<name>-cloudwatch-agent-install".
+      action: "Install" # (Optional) AWS-ConfigureAWSPackage action. Valid values include "Install" and "Uninstall". Default: "Install".
+      package_name: "AmazonCloudWatchAgent" # (Optional) Package name to install. Default: "AmazonCloudWatchAgent".
+      version: "latest" # (Optional) Package version. Default: "latest".
+      parameters: {} # (Optional) Extra or overriding SSM document parameters. Default: {}.
+    configure:
+      enabled: false # (Optional) Store an agent config in SSM Parameter Store and run AmazonCloudWatch-ManageAgent. Default: false.
+      document_name: "AmazonCloudWatch-ManageAgent" # (Optional) SSM document used to configure/start the agent. Default: "AmazonCloudWatch-ManageAgent".
+      association_name: null # (Optional) Custom configuration association name, truncated to 128 characters. Default: "<name>-cloudwatch-agent-config".
+      parameter_name: null # (Optional) SSM parameter name for the agent JSON config. Default: "AmazonCloudWatch-<name>-agent-config".
+      config: {} # (Optional) Agent configuration object encoded as JSON when config_json is unset. Default: {}.
+      config_json: null # (Optional) Pre-rendered CloudWatch agent JSON configuration. Default: null.
+      action: "configure" # (Optional) AmazonCloudWatch-ManageAgent action. Default: "configure".
+      mode: "ec2" # (Optional) AmazonCloudWatch-ManageAgent mode. Common value: "ec2". Default: "ec2".
+      source: "ssm" # (Optional) Configuration source. Common value: "ssm". Default: "ssm".
+      restart: "yes" # (Optional) Restart the agent after configuration. Valid values: "yes", "no". Default: "yes".
+      attach_parameter_policy: true # (Optional) Attach least-privilege SSM parameter read policy when iam.create=true. Default: true.
+      parameters: {} # (Optional) Extra or overriding SSM document parameters. Default: {}.
+    workload_detection:
+      enabled: false # (Optional) Add opt-in workload detection tags for CloudWatch tag-based deployment. Default: false.
+      tag_key: "CloudWatchWorkloadDetection" # (Optional) Workload detection opt-in tag key. Default: "CloudWatchWorkloadDetection".
+      tag_value: "enabled" # (Optional) Workload detection opt-in tag value. Default: "enabled".
 
   ami:
     name: null # (Optional) AMI name lookup. When set, it takes precedence over ami.id. Default: null.
@@ -281,8 +318,9 @@ inputs = {
 1. From your environment stack, create a directory for the EC2 deployment.
 2. Run `terragrunt scaffold github.com/cloudopsworks/terraform-module-aws-ec2-instances` inside that directory.
 3. Fill in `inputs.yaml`, making sure `instance.type`, AMI selection, and subnet details are set.
-4. Run `terragrunt plan` and review the proposed EC2, IAM, networking, and storage resources.
-5. Apply with `terragrunt apply` once the plan matches the desired deployment.
+4. Optionally enable `instance.cloudwatch_agent.enabled` when the AMI has SSM Agent and network access to SSM/CloudWatch endpoints.
+5. Run `terragrunt plan` and review the proposed EC2, IAM, networking, storage, and optional SSM association resources.
+6. Apply with `terragrunt apply` once the plan matches the desired deployment.
 
 
 ## Examples
@@ -299,6 +337,11 @@ Common deployment patterns for this module include:
    - Set `instance.dedicated_host.enabled = true` for non-Spot launches, or provide `instance.host_id` to reuse an existing host.
 5. **Private subnet with controlled ingress**
    - Set `instance.vpc.associate_public_ip_address = false`, attach existing security groups through `instance.vpc.security_group_ids`, or enable `instance.security_group.create` and define explicit rules.
+6. **CloudWatch Agent rollout**
+   - Set `instance.cloudwatch_agent.enabled = true` to install the agent through SSM State Manager.
+   - Keep `iam.create = true` and `instance.cloudwatch_agent.attach_managed_policies = true` to attach the SSM and CloudWatch agent managed policies automatically, or provide an equivalent existing instance profile.
+   - Set `instance.cloudwatch_agent.configure.enabled = true` and provide `config` or `config_json` to store a CloudWatch agent configuration in Parameter Store and start the agent with `AmazonCloudWatch-ManageAgent`.
+   - Set `instance.cloudwatch_agent.workload_detection.enabled = true` to add opt-in tags for CloudWatch's tag-based workload-detection deployment. The account-level workload detection setting is managed in CloudWatch, not by this module.
 
 
 
@@ -319,15 +362,14 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
-| <a name="requirement_tls"></a> [tls](#requirement\_tls) | ~> 4.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.35 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.4 |
-| <a name="provider_tls"></a> [tls](#provider\_tls) | ~> 4.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.56.0 |
+| <a name="provider_tls"></a> [tls](#provider\_tls) | 4.3.0 |
 
 ## Modules
 
@@ -349,7 +391,10 @@ Available targets:
 | [aws_eip_association.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip_association) | resource |
 | [aws_iam_instance_profile.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_role.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy.cloudwatch_agent_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.cloudwatch_agent_server](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.cloudwatch_agent_ssm_core](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_instance.ami_ignore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
 | [aws_instance.spot](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance) | resource |
@@ -362,9 +407,13 @@ Available targets:
 | [aws_secretsmanager_secret_version.instance_public_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [aws_security_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group_rule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_ssm_association.cloudwatch_agent_configure](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_association) | resource |
+| [aws_ssm_association.cloudwatch_agent_install](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_association) | resource |
+| [aws_ssm_parameter.cloudwatch_agent_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_parameter) | resource |
 | [tls_private_key.this](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
 | [aws_ami.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ami) | data source |
 | [aws_iam_policy_document.assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.cloudwatch_agent_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
@@ -375,30 +424,31 @@ Available targets:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | n/a | `map(string)` | `{}` | no |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | The IAM role to use for the EC2 Instance | `any` | `{}` | no |
 | <a name="input_instance"></a> [instance](#input\_instance) | The instance type to use for the EC2 Instance | `any` | `{}` | no |
-| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Establish this is a HUB or spoke configuration | `bool` | `false` | no |
+| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Is this a hub or spoke configuration? | `bool` | `false` | no |
 | <a name="input_name"></a> [name](#input\_name) | The name of the EC2 Instance | `string` | `""` | no |
 | <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | The name prefix of the EC2 Instance | `string` | `""` | no |
-| <a name="input_org"></a> [org](#input\_org) | n/a | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | n/a | `string` | `"001"` | no |
+| <a name="input_org"></a> [org](#input\_org) | Organization details | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
+| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | Spoke ID Number, must be a 3 digit number | `string` | `"001"` | no |
 | <a name="input_timeouts"></a> [timeouts](#input\_timeouts) | The timeouts of the EC2 Instance | `any` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| <a name="output_dedicated_host_arn"></a> [dedicated\_host\_arn](#output\_dedicated\_host\_arn) | n/a |
-| <a name="output_dedicated_host_id"></a> [dedicated\_host\_id](#output\_dedicated\_host\_id) | n/a |
-| <a name="output_iam_role"></a> [iam\_role](#output\_iam\_role) | n/a |
-| <a name="output_instance_id"></a> [instance\_id](#output\_instance\_id) | n/a |
-| <a name="output_key_pair_name"></a> [key\_pair\_name](#output\_key\_pair\_name) | n/a |
-| <a name="output_key_pair_public_key"></a> [key\_pair\_public\_key](#output\_key\_pair\_public\_key) | n/a |
-| <a name="output_key_pair_ssh_private_key"></a> [key\_pair\_ssh\_private\_key](#output\_key\_pair\_ssh\_private\_key) | n/a |
-| <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | n/a |
-| <a name="output_security_group_name"></a> [security\_group\_name](#output\_security\_group\_name) | n/a |
-| <a name="output_state"></a> [state](#output\_state) | n/a |
+| <a name="output_cloudwatch_agent"></a> [cloudwatch\_agent](#output\_cloudwatch\_agent) | CloudWatch Agent SSM associations, configuration parameter, and opt-in tags. |
+| <a name="output_dedicated_host_arn"></a> [dedicated\_host\_arn](#output\_dedicated\_host\_arn) | ARN of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |
+| <a name="output_dedicated_host_id"></a> [dedicated\_host\_id](#output\_dedicated\_host\_id) | ID of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |
+| <a name="output_iam_role"></a> [iam\_role](#output\_iam\_role) | Created IAM instance profile, role name, and role ARN when iam.create is true. |
+| <a name="output_instance_id"></a> [instance\_id](#output\_instance\_id) | ID of the EC2 instance created by the active launch path. |
+| <a name="output_key_pair_name"></a> [key\_pair\_name](#output\_key\_pair\_name) | Name of the generated AWS key pair when instance.key\_pair.create is true. |
+| <a name="output_key_pair_public_key"></a> [key\_pair\_public\_key](#output\_key\_pair\_public\_key) | Generated OpenSSH public key material when instance.key\_pair.create is true. |
+| <a name="output_key_pair_ssh_private_key"></a> [key\_pair\_ssh\_private\_key](#output\_key\_pair\_ssh\_private\_key) | Generated OpenSSH private key material when instance.key\_pair.create is true. |
+| <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | ID of the managed security group when instance.security\_group.create is true. |
+| <a name="output_security_group_name"></a> [security\_group\_name](#output\_security\_group\_name) | Name of the managed security group when instance.security\_group.create is true. |
+| <a name="output_state"></a> [state](#output\_state) | Current state of the EC2 instance created by the active launch path. |
 
 
 
