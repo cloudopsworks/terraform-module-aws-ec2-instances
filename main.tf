@@ -20,6 +20,10 @@ locals {
       Name = local.name
     }
   )
+  attach_existing_network_interface = (
+    !try(var.instance.network_interface.create, false)
+    && try(trimspace(var.instance.network_interface.network_interface_id), "") != ""
+  )
 }
 
 data "aws_ami" "this" {
@@ -128,10 +132,10 @@ resource "aws_instance" "this" {
     }
   }
   dynamic "primary_network_interface" {
-    for_each = length(try(var.instance.network_interface, {})) > 0 && !try(var.instance.network_interface.create, false) ? [1] : []
+    for_each = local.attach_existing_network_interface ? [1] : []
     content {
       delete_on_termination = try(var.instance.network_interface.delete_on_termination, null)
-      network_interface_id  = try(var.instance.network_interface.network_interface_id, null)
+      network_interface_id  = var.instance.network_interface.network_interface_id
     }
   }
   dynamic "private_dns_name_options" {
