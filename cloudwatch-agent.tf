@@ -70,7 +70,7 @@ locals {
     null
   ), "AmazonCloudWatch-${local.name}-agent-config")
   cloudwatch_agent_configuration = try(local.cloudwatch_agent_settings.configure.config_json, null) != null ? local.cloudwatch_agent_settings.configure.config_json : jsonencode(
-    try(local.cloudwatch_agent_settings.configure.config, {} )
+    try(local.cloudwatch_agent_settings.configure.config, {})
   )
   cloudwatch_agent_configure_parameters = merge(
     {
