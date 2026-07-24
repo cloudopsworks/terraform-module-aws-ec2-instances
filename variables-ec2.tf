@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -92,6 +92,41 @@ variable "name_prefix" {
 #     instance_metadata_tags: "enabled" | "disabled" # defaults to "enabled"
 #   placement_group: "placement-group" # defaults to null
 #   tenancy: "default" | "dedicated" # defaults to null
+#   cloudwatch_agent:
+#     enabled: true | false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
+#     attach_managed_policies: true | false # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+#     tag_key: "CloudWatchAgent" # (Optional) Tag key used by SSM State Manager association targets. Default: "CloudWatchAgent".
+#     tag_value: "enabled" # (Optional) Tag value used by SSM State Manager association targets. Default: "enabled".
+#     ssm_managed_policy_arn: "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore" # (Optional) Override SSM managed instance policy ARN.
+#     server_managed_policy_arn: "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy" # (Optional) Override CloudWatch agent server policy ARN.
+#     target:
+#       key: "tag:CloudWatchAgent" # (Optional) SSM target key. Use "InstanceIds" or "tag:<TagKey>". Default: "tag:<tag_key>".
+#       values: ["enabled"] # (Optional) SSM target values. Default: [tag_value].
+#     install:
+#       enabled: true | false # (Optional) Create AWS-ConfigureAWSPackage association to install AmazonCloudWatchAgent. Default: true.
+#       document_name: "AWS-ConfigureAWSPackage" # (Optional) SSM document used to install the package.
+#       association_name: "name-cloudwatch-agent-install" # (Optional) Custom installation association name.
+#       action: "Install" # (Optional) AWS-ConfigureAWSPackage action. Valid values include Install and Uninstall.
+#       package_name: "AmazonCloudWatchAgent" # (Optional) Package name to install.
+#       version: "latest" # (Optional) Package version.
+#       parameters: {} # (Optional) Extra or overriding SSM document parameters.
+#     configure:
+#       enabled: true | false # (Optional) Store an agent config in SSM Parameter Store and run AmazonCloudWatch-ManageAgent. Default: false.
+#       document_name: "AmazonCloudWatch-ManageAgent" # (Optional) SSM document used to configure/start the agent.
+#       association_name: "name-cloudwatch-agent-config" # (Optional) Custom configuration association name.
+#       parameter_name: "AmazonCloudWatch-name-agent-config" # (Optional) SSM parameter name for the agent JSON config. Default starts with AmazonCloudWatch-.
+#       config: {} # (Optional) Agent configuration object encoded as JSON when config_json is unset.
+#       config_json: "{}" # (Optional) Pre-rendered CloudWatch agent JSON configuration.
+#       action: "configure" # (Optional) AmazonCloudWatch-ManageAgent action.
+#       mode: "ec2" # (Optional) AmazonCloudWatch-ManageAgent mode. Common value: ec2.
+#       source: "ssm" # (Optional) Configuration source. Common value: ssm.
+#       restart: "yes" # (Optional) Restart the agent after configuration. Valid values: yes or no.
+#       attach_parameter_policy: true | false # (Optional) Attach least-privilege SSM parameter read policy when iam.create=true. Default: true.
+#       parameters: {} # (Optional) Extra or overriding SSM document parameters.
+#     workload_detection:
+#       enabled: true | false # (Optional) Add opt-in workload detection tags for CloudWatch tag-based deployment. Default: false.
+#       tag_key: "CloudWatchWorkloadDetection" # (Optional) Workload detection opt-in tag key.
+#       tag_value: "enabled" # (Optional) Workload detection opt-in tag value.
 #   backup:
 #     enabled: true | false # defaults to false
 #     only_tag: true | false # defaults to true

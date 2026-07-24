@@ -94,6 +94,24 @@ Module versioning follows GitHub Flow — a simplified branching model where fea
 - Avoid in the commit comments explicitly mentioning `+semver:` changes within changesets, describe it with other words. The semver annotations should only be present in commit messages and PR descriptions to trigger the correct version bump in CI.
 - Avoid scrubbing into Makefile or tronador utility scripts.
 - Use `make` targets whenever available for branch and release operations.
+- **Prefer the `tronador` CLI for `repos/*` operations when it is available**. Check with `command -v tronador`; if present, use the `tronador repos` subcommands instead of the equivalent `make repos/*` targets. Fall back to `make` when the CLI is not installed. The CLI ports the `repos/*` make targets and accepts `--dry-run`, `--verbose`, and `--workdir <dir>` global flags.
+
+  | Make target                    | `tronador` CLI equivalent           |
+  |--------------------------------|-------------------------------------|
+  | `make repos/upgrade`           | `tronador repos upgrade`            |
+  | `make repos/upgrade/major`     | `tronador repos upgrade major`      |
+  | `make repos/upgrade/<version>` | `tronador repos upgrade <version>`  |
+  | `make repos/upgrade/master`    | `tronador repos upgrade master`     |
+  | `make repos/available`         | `tronador repos available`          |
+  | `make repos/clean`             | `tronador repos clean`              |
+  | `make repos/clean/template`    | `tronador repos clean template`     |
+  | `make repos/push`              | `tronador repos push`               |
+  | `make repos/recover`           | `tronador repos recover --pull-branch <ref>` |
+  | `make repos/template/terraform-module` | `tronador repos template terraform-module` |
+  | `make repos/template/init`     | `tronador repos template init`      |
+  | `make repos/cicd/update`       | `tronador repos cicd update`        |
+
+  Only `repos/*` operations are covered by the CLI — continue using `make` for `gitflow/*`, `fmt`, `lint`, `readme`, and `init/*`.
 - Use `gh` cli for PR merging and release management. If the `github-mcp-server` MCP is available in your environment, prefer its tools over the `gh` CLI for all GitHub operations (PR creation, merging, status checks, issue management).
   - When waiting for a PR status check to pass, use `gh pr checks <number> --watch` (or the equivalent `github-mcp-server` MCP tool if available)
 - Plan consistently and thoroughly before starting any work.
@@ -120,7 +138,7 @@ refactor!: remove deprecated outputs +semver: breaking
 ### Module Dependency Management
 - Honor git submodules for module dependencies with ref to the latest release tag possible.
 - Lookup for the latest version of each module dependency when updating the submodule, specially under feature branches.
-- Note that the `make repos/upgrade` command will pull the latest template version, but it does not automatically update module dependencies. Always check and update submodule references as needed when upgrading the template or making significant changes.
+- Note that the `tronador repos upgrade` command (or `make repos/upgrade` when the CLI is unavailable) will pull the latest template version, but it does not automatically update module dependencies. Always check and update submodule references as needed when upgrading the template or making significant changes.
 
 ### New Module Features and Provider Version Upgrades
 
@@ -151,9 +169,10 @@ Workflow upgrades and documentation-only fixes are patch-level changes and use t
    ```sh
    make gitflow/hotfix/start
    ```
-2. Apply changes (run `make repos/upgrade` for template upgrades, then update docs as needed):
+2. Apply changes (run the template upgrade, then update docs as needed):
    ```sh
-   make repos/upgrade   # pulls latest template version
+   tronador repos upgrade   # pulls latest template version (preferred when the CLI is installed)
+   # make repos/upgrade     # fallback when the tronador CLI is not available
    # edit .boilerplate/inputs.yaml, README.yaml, etc.
    make readme          # regenerate README.md last
    ```
@@ -195,11 +214,13 @@ Key rules:
 
 ### Summary Table
 
-| Change Type                                      | Branch Type | Merges Into | Make Target             | Semver Impact | Annotation                          |
+> **Command column:** prefer the `tronador` CLI form when it is installed; the `make` target in parentheses is the fallback.
+
+| Change Type                                      | Branch Type | Merges Into | Command                 | Semver Impact | Annotation                          |
 |--------------------------------------------------|-------------|-------------|-------------------------|---------------|-------------------------------------|
-| Workflow version upgrade (patch)                 | `hotfix`    | `master`    | `make repos/upgrade`    | PATCH         | `+semver: patch`                    |
-| Workflow version upgrade (minor)                 | `feature`   | `master`    | `make repos/upgrade`    | MINOR         | `+semver: minor`                    |
-| Workflow version upgrade (major)                 | `feature`   | `master`    | `make repos/upgrade/major` | MAJOR      | `+semver: major`                    |
+| Workflow version upgrade (patch)                 | `hotfix`    | `master`    | `tronador repos upgrade` (`make repos/upgrade`) | PATCH         | `+semver: patch`                    |
+| Workflow version upgrade (minor)                 | `feature`   | `master`    | `tronador repos upgrade` (`make repos/upgrade`) | MINOR         | `+semver: minor`                    |
+| Workflow version upgrade (major)                 | `feature`   | `master`    | `tronador repos upgrade major` (`make repos/upgrade/major`) | MAJOR      | `+semver: major`                    |
 | Documentation fix / inputs.yaml sync            | `hotfix`    | `master`    | —                       | PATCH         | `+semver: patch`                    |
 | Provider major version upgrade                   | `feature`   | `master`    | —                       | MAJOR         | `+semver: major`                    |
 | Provider minor/patch version upgrade             | `feature`   | `master`    | —                       | MINOR / PATCH | `+semver: minor` / `+semver: patch` |

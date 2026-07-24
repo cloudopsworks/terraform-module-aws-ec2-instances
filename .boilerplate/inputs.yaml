@@ -29,6 +29,42 @@ instance:
   volume_extra_tags: {} # (Optional) Additional tags merged into EBS volume tags. Default: {}.
   secrets_manager_enabled: true # (Optional) Store generated key material in AWS Secrets Manager when key_pair.create=true. Default: true.
 
+  cloudwatch_agent:
+    enabled: false # (Optional) Install/configure the Amazon CloudWatch Agent through SSM State Manager. Default: false.
+    attach_managed_policies: true # (Optional) Attach AmazonSSMManagedInstanceCore and CloudWatchAgentServerPolicy when iam.create=true. Default: true.
+    tag_key: "CloudWatchAgent" # (Optional) Tag key used by SSM State Manager association targets. Default: "CloudWatchAgent".
+    tag_value: "enabled" # (Optional) Tag value used by SSM State Manager association targets. Default: "enabled".
+    ssm_managed_policy_arn: null # (Optional) Override SSM managed instance policy ARN. Default: AWS AmazonSSMManagedInstanceCore partition-aware ARN.
+    server_managed_policy_arn: null # (Optional) Override CloudWatch agent server policy ARN. Default: AWS CloudWatchAgentServerPolicy partition-aware ARN.
+    target:
+      key: null # (Optional) SSM target key. Use "InstanceIds" or "tag:<TagKey>". Default: "tag:<cloudwatch_agent.tag_key>".
+      values: [] # (Optional) SSM target values. Default: [cloudwatch_agent.tag_value].
+    install:
+      enabled: true # (Optional) Create AWS-ConfigureAWSPackage association to install AmazonCloudWatchAgent. Default: true.
+      document_name: "AWS-ConfigureAWSPackage" # (Optional) SSM document used to install the package. Default: "AWS-ConfigureAWSPackage".
+      association_name: null # (Optional) Custom installation association name, truncated to 128 characters. Default: "<name>-cloudwatch-agent-install".
+      action: "Install" # (Optional) AWS-ConfigureAWSPackage action. Valid values include "Install" and "Uninstall". Default: "Install".
+      package_name: "AmazonCloudWatchAgent" # (Optional) Package name to install. Default: "AmazonCloudWatchAgent".
+      version: "latest" # (Optional) Package version. Default: "latest".
+      parameters: {} # (Optional) Extra or overriding SSM document parameters. Default: {}.
+    configure:
+      enabled: false # (Optional) Store an agent config in SSM Parameter Store and run AmazonCloudWatch-ManageAgent. Default: false.
+      document_name: "AmazonCloudWatch-ManageAgent" # (Optional) SSM document used to configure/start the agent. Default: "AmazonCloudWatch-ManageAgent".
+      association_name: null # (Optional) Custom configuration association name, truncated to 128 characters. Default: "<name>-cloudwatch-agent-config".
+      parameter_name: null # (Optional) SSM parameter name for the agent JSON config. Default: "AmazonCloudWatch-<name>-agent-config".
+      config: {} # (Optional) Agent configuration object encoded as JSON when config_json is unset. Default: {}.
+      config_json: null # (Optional) Pre-rendered CloudWatch agent JSON configuration. Default: null.
+      action: "configure" # (Optional) AmazonCloudWatch-ManageAgent action. Default: "configure".
+      mode: "ec2" # (Optional) AmazonCloudWatch-ManageAgent mode. Common value: "ec2". Default: "ec2".
+      source: "ssm" # (Optional) Configuration source. Common value: "ssm". Default: "ssm".
+      restart: "yes" # (Optional) Restart the agent after configuration. Valid values: "yes", "no". Default: "yes".
+      attach_parameter_policy: true # (Optional) Attach least-privilege SSM parameter read policy when iam.create=true. Default: true.
+      parameters: {} # (Optional) Extra or overriding SSM document parameters. Default: {}.
+    workload_detection:
+      enabled: false # (Optional) Add opt-in workload detection tags for CloudWatch tag-based deployment. Default: false.
+      tag_key: "CloudWatchWorkloadDetection" # (Optional) Workload detection opt-in tag key. Default: "CloudWatchWorkloadDetection".
+      tag_value: "enabled" # (Optional) Workload detection opt-in tag value. Default: "enabled".
+
   ami:
     name: null # (Optional) AMI name lookup. When set, it takes precedence over ami.id. Default: null.
     id: null # (Optional) Explicit AMI ID. Use this when ami.name is not set. Default: null.
