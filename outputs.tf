@@ -75,7 +75,7 @@ output "cloudwatch_agent" {
     workload_detection_enabled      = local.cloudwatch_agent_workload_detection_enabled
     workload_detection_tag_key      = local.cloudwatch_agent_workload_detection_tag_key
     workload_detection_tag_value    = local.cloudwatch_agent_workload_detection_tag_value
-    attached_managed_policy_arns    = local.cloudwatch_agent_managed_policies_enabled ? [local.cloudwatch_agent_ssm_core_policy_arn, local.cloudwatch_agent_server_policy_arn] : []
+    attached_managed_policy_arns    = local.cloudwatch_agent_attached_managed_policy_arns
     ssm_association_target_key      = local.cloudwatch_agent_target_key
     ssm_association_target_values   = local.cloudwatch_agent_target_values
     configure_parameter_policy_name = try(aws_iam_role_policy.cloudwatch_agent_config[0].name, "")

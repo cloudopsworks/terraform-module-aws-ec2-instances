@@ -30,8 +30,8 @@ locals {
     (local.cloudwatch_agent_workload_detection_tag_key) = local.cloudwatch_agent_workload_detection_tag_value
   } : {}
 
-  cloudwatch_agent_target_key    = coalesce(try(local.cloudwatch_agent_settings.target.key, null), "tag:${local.cloudwatch_agent_rollout_tag_key}")
-  cloudwatch_agent_target_values = length(coalesce(try(local.cloudwatch_agent_settings.target.values, null), [])) > 0 ? local.cloudwatch_agent_settings.target.values : [local.cloudwatch_agent_rollout_tag_value]
+  cloudwatch_agent_target_key    = coalesce(try(local.cloudwatch_agent_settings.target.key, null), "InstanceIds")
+  cloudwatch_agent_target_values = length(coalesce(try(local.cloudwatch_agent_settings.target.values, null), [])) > 0 ? local.cloudwatch_agent_settings.target.values : (local.cloudwatch_agent_target_key == "InstanceIds" ? [local.ec2_instance_id] : [local.cloudwatch_agent_rollout_tag_value])
 
   cloudwatch_agent_ssm_core_policy_arn = coalesce(try(
     local.cloudwatch_agent_settings.ssm_managed_policy_arn,
@@ -41,6 +41,20 @@ locals {
     local.cloudwatch_agent_settings.server_managed_policy_arn,
     null
   ), "arn:${data.aws_partition.current.partition}:iam::aws:policy/CloudWatchAgentServerPolicy")
+  cloudwatch_agent_attach_ssm_core_policy = (
+    local.cloudwatch_agent_managed_policies_enabled
+    && !local.iam_ssm_enabled
+    && !contains(local.iam_managed_policy_attachment_arns, local.cloudwatch_agent_ssm_core_policy_arn)
+  )
+  cloudwatch_agent_attach_server_policy = (
+    local.cloudwatch_agent_managed_policies_enabled
+    && !contains(local.iam_managed_policy_attachment_arns, local.cloudwatch_agent_server_policy_arn)
+    && local.cloudwatch_agent_server_policy_arn != local.cloudwatch_agent_ssm_core_policy_arn
+  )
+  cloudwatch_agent_attached_managed_policy_arns = compact([
+    local.cloudwatch_agent_attach_ssm_core_policy ? local.cloudwatch_agent_ssm_core_policy_arn : "",
+    local.cloudwatch_agent_attach_server_policy ? local.cloudwatch_agent_server_policy_arn : ""
+  ])
 
   cloudwatch_agent_install_parameters = merge(
     {
@@ -56,7 +70,7 @@ locals {
     null
   ), "AmazonCloudWatch-${local.name}-agent-config")
   cloudwatch_agent_configuration = try(local.cloudwatch_agent_settings.configure.config_json, null) != null ? local.cloudwatch_agent_settings.configure.config_json : jsonencode(
-    coalesce(try(local.cloudwatch_agent_settings.configure.config, null), {})
+    try(local.cloudwatch_agent_settings.configure.config, {})
   )
   cloudwatch_agent_configure_parameters = merge(
     {
@@ -71,13 +85,13 @@ locals {
 }
 
 resource "aws_iam_role_policy_attachment" "cloudwatch_agent_ssm_core" {
-  count      = local.cloudwatch_agent_managed_policies_enabled ? 1 : 0
+  count      = local.cloudwatch_agent_attach_ssm_core_policy ? 1 : 0
   role       = aws_iam_role.this[0].name
   policy_arn = local.cloudwatch_agent_ssm_core_policy_arn
 }
 
 resource "aws_iam_role_policy_attachment" "cloudwatch_agent_server" {
-  count      = local.cloudwatch_agent_managed_policies_enabled ? 1 : 0
+  count      = local.cloudwatch_agent_attach_server_policy ? 1 : 0
   role       = aws_iam_role.this[0].name
   policy_arn = local.cloudwatch_agent_server_policy_arn
 }
@@ -128,6 +142,8 @@ resource "aws_ssm_association" "cloudwatch_agent_install" {
 
   depends_on = [
     aws_iam_instance_profile.this,
+    aws_iam_role_policy_attachment.this,
+    aws_iam_role_policy_attachment.ssm_managed_instance_core,
     aws_iam_role_policy_attachment.cloudwatch_agent_server,
     aws_iam_role_policy_attachment.cloudwatch_agent_ssm_core
   ]

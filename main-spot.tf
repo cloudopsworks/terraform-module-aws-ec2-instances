@@ -83,14 +83,11 @@ resource "aws_instance" "spot" {
       virtual_name = try(ephemeral_block_device.value.virtual_name, null)
     }
   }
-  dynamic "metadata_options" {
-    for_each = length(try(var.instance.metadata_options, {})) > 0 ? [var.instance.metadata_options] : []
-    content {
-      http_endpoint               = try(metadata_options.value.http_endpoint, null)
-      http_put_response_hop_limit = try(metadata_options.value.http_put_response_hop_limit, null)
-      http_tokens                 = try(metadata_options.value.http_tokens, null)
-      instance_metadata_tags      = try(metadata_options.value.instance_metadata_tags, null)
-    }
+  metadata_options {
+    http_endpoint               = local.instance_metadata_http_endpoint
+    http_put_response_hop_limit = local.instance_metadata_http_put_response_hop_limit
+    http_tokens                 = local.instance_metadata_http_tokens
+    instance_metadata_tags      = local.instance_metadata_tags
   }
   dynamic "private_dns_name_options" {
     for_each = length(try(var.instance.private_dns_name_options, {})) > 0 ? [var.instance.private_dns_name_options] : []
@@ -159,7 +156,7 @@ resource "aws_ec2_tag" "spot_instance_tags" {
 
 resource "aws_eip_association" "spot_instance" {
   count                = try(var.instance.create, true) && !try(var.instance.ignore_ami_changes, false) && try(var.instance.create_spot, false) && !try(var.instance.vpc.associate_public_ip_address, false) && try(var.instance.vpc.public_eip_id, "") != "" ? 1 : 0
-  instance_id          = aws_instance.this[0].id
+  instance_id          = aws_instance.spot[0].id
   allocation_id        = var.instance.vpc.public_eip_id
   network_interface_id = try(var.instance.network_interface.create, false) ? aws_network_interface.this[0].id : null
 }

@@ -10,6 +10,21 @@ data "aws_partition" "current" {}
 
 locals {
   iam_role_name = "role-${local.name}"
+  iam_ssm_managed_instance_core_policy_arn = (
+    "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  )
+  iam_ssm_enabled = (
+    try(var.instance.create, true)
+    && try(var.iam.create, true)
+    && coalesce(try(var.iam.ssm_enabled, null), true)
+  )
+  iam_role_policy_arns = toset([
+    for arn in coalesce(try(values(var.iam.role_policies), try(var.iam.role_policies, [])), []) : trimspace(arn)
+  ])
+  iam_managed_policy_attachment_arns = setunion(
+    local.iam_role_policy_arns,
+    local.iam_ssm_enabled ? toset([local.iam_ssm_managed_instance_core_policy_arn]) : toset([])
+  )
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -77,9 +92,23 @@ resource "aws_iam_role_policy" "policy" {
 
 resource "aws_iam_role_policy_attachment" "this" {
   for_each = {
-    for k, v in try(var.iam.role_policies, {}) : k => v if try(var.instance.create, true) && try(var.iam.create, true)
+    for k, v in try(var.iam.role_policies, {}) : k => v
+    if(
+      try(var.instance.create, true)
+      && try(var.iam.create, true)
+      && !(
+        local.iam_ssm_enabled
+        && try(trimspace(v), "") == local.iam_ssm_managed_instance_core_policy_arn
+      )
+    )
   }
   policy_arn = each.value
+  role       = aws_iam_role.this[0].name
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
+  count      = local.iam_ssm_enabled ? 1 : 0
+  policy_arn = local.iam_ssm_managed_instance_core_policy_arn
   role       = aws_iam_role.this[0].name
 }
 
@@ -95,5 +124,3 @@ resource "aws_iam_instance_profile" "this" {
     create_before_destroy = true
   }
 }
-
-
