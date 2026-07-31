@@ -27,7 +27,10 @@ instance:
   # host_id: null # (Optional) Existing dedicated host ID to reuse when dedicated_host.enabled=false. Default: null.
   # cpu_credits: null # (Optional) CPU credits mode for burstable families. Valid values: "standard", "unlimited". Default: null.
   # extra_tags: {} # (Optional) Additional tags merged into instance tags. Default: {}.
-  # volume_extra_tags: {} # (Optional) Additional tags merged into EBS volume tags. Default: {}.
+  # volume_tags:
+  #   enabled: true # (Optional) Tag every attached volume through the instance-level volume_tags attribute. Set false to tag the root and EBS block devices individually instead. Default: true.
+  #   extra_tags: {} # (Optional) Additional tags merged into the computed volume tags. Default: {}.
+  #   # Computed volume tags = common module tags + extra_tags + Name: "<instance name>" + InstanceName: "<instance name>".
   # secrets_manager_enabled: true # (Optional) Store generated key material in AWS Secrets Manager when key_pair.create=true. Default: true.
 
   # cloudwatch_agent:
@@ -123,11 +126,11 @@ instance:
   #   encrypted: null # (Optional) Encrypt the root volume. Default: null.
   #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Default: null.
   #   delete_on_termination: null # (Optional) Delete the root volume when the instance is terminated. Default: null.
-  #   tags: {} # (Optional) Additional tags for the root volume. Default: {}.
+  #   tags: {} # (Optional) Additional tags for the root volume, merged over the computed volume tags. Only applied when instance.volume_tags.enabled=false. Default: {}.
 
   # ebs:
   #   ebs_optimized: null # (Optional) Enable EBS optimization when supported by the instance type. Default: null.
-  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Default: [].
+  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. Default: [].
 
   # ephemeral_block_device: [] # (Optional) Ephemeral devices. Each item supports device_name and optional virtual_name and no_device. Default: [].
 

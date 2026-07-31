@@ -46,7 +46,7 @@ resource "aws_instance" "ami_ignore" {
       volume_size           = try(var.instance.root_block_device.volume_size, null)
       volume_type           = try(var.instance.root_block_device.volume_type, null)
       throughput            = try(var.instance.root_block_device.throughput, null)
-      tags                  = try(var.instance.root_block_device.tags, null)
+      tags                  = local.volume_tags_enabled ? null : merge(local.volume_tags, try(var.instance.root_block_device.tags, {}))
     }
   }
   dynamic "ebs_block_device" {
@@ -61,7 +61,7 @@ resource "aws_instance" "ami_ignore" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
+      tags                  = local.volume_tags_enabled ? null : merge(local.volume_tags, { Name = format("%s-%s", local.name, ebs_block_device.key) }, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
@@ -125,10 +125,7 @@ resource "aws_instance" "ami_ignore" {
   tenancy                              = try(var.instance.tenancy, null)
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
   tags                                 = local.instance_tags
-  volume_tags = merge(
-    local.instance_tags,
-    try(var.instance.volume_extra_tags, {})
-  )
+  volume_tags                          = local.volume_tags_enabled ? local.volume_tags : null
   timeouts {
     create = try(var.timeouts.create, null)
     update = try(var.timeouts.update, null)
