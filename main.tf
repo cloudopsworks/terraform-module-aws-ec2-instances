@@ -10,14 +10,24 @@
 locals {
   is_t_instance_type = replace(var.instance.type, "/^t(2|3|3a|4g){1}\\..*$/", "1") == "1" ? true : false
   name               = var.name_prefix != "" ? "${var.name_prefix}-${local.system_name}" : var.name
+  name_map = {
+    Name = local.name
+  }
   instance_tags = merge(
     local.all_tags,
     local.backup_tags,
     local.cloudwatch_agent_rollout_tags,
     local.cloudwatch_agent_workload_detection_tags,
     try(var.instance.extra_tags, {}),
+    local.name_map
+  )
+  volume_tags_enabled = try(var.instance.volume_tags.enabled, true)
+  volume_tags = merge(
+    local.all_tags,
+    try(var.instance.volume_tags.extra_tags, {}),
+    local.name_map,
     {
-      Name = local.name
+      InstanceName = local.name
     }
   )
   manage_primary_network_interface = try(var.instance.network_interface.create, false)
@@ -103,7 +113,7 @@ resource "aws_instance" "this" {
       volume_size           = try(var.instance.root_block_device.volume_size, null)
       volume_type           = try(var.instance.root_block_device.volume_type, null)
       throughput            = try(var.instance.root_block_device.throughput, null)
-      tags                  = try(var.instance.root_block_device.tags, null)
+      tags                  = local.volume_tags_enabled ? null : merge(local.volume_tags, try(var.instance.root_block_device.tags, {}))
     }
   }
   dynamic "ebs_block_device" {
@@ -118,7 +128,7 @@ resource "aws_instance" "this" {
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
       throughput            = try(ebs_block_device.value.throughput, null)
-      tags                  = merge(local.all_tags, try(ebs_block_device.value.tags, {}))
+      tags                  = local.volume_tags_enabled ? null : merge(local.volume_tags, { Name = format("%s-%s", local.name, ebs_block_device.key) }, try(ebs_block_device.value.tags, {}))
     }
   }
   dynamic "ephemeral_block_device" {
@@ -182,10 +192,7 @@ resource "aws_instance" "this" {
   tenancy                              = try(var.instance.tenancy, null)
   host_id                              = try(var.instance.dedicated_host.enabled, false) ? aws_ec2_host.this[0].id : try(var.instance.host_id, null)
   tags                                 = local.instance_tags
-  volume_tags = merge(
-    local.instance_tags,
-    try(var.instance.volume_extra_tags, {})
-  )
+  volume_tags                          = local.volume_tags_enabled ? local.volume_tags : null
   timeouts {
     create = try(var.timeouts.create, null)
     update = try(var.timeouts.update, null)
