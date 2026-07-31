@@ -94,7 +94,10 @@ usage: |-
     # host_id: null # (Optional) Existing dedicated host ID to reuse when dedicated_host.enabled=false. Default: null.
     # cpu_credits: null # (Optional) CPU credits mode for burstable families. Valid values: "standard", "unlimited". Default: null.
     # extra_tags: {} # (Optional) Additional tags merged into instance tags. Default: {}.
-    # volume_extra_tags: {} # (Optional) Additional tags merged into EBS volume tags. Default: {}.
+    # volume_tags:
+    #   enabled: true # (Optional) Tag every attached volume through the instance-level volume_tags attribute. Set false to tag the root and EBS block devices individually instead. Default: true.
+    #   extra_tags: {} # (Optional) Additional tags merged into the computed volume tags. Default: {}.
+    #   # Computed volume tags = common module tags + extra_tags + Name: "<instance name>" + InstanceName: "<instance name>".
     # secrets_manager_enabled: true # (Optional) Store generated key material in AWS Secrets Manager when key_pair.create=true. Default: true.
 
     # cloudwatch_agent:
@@ -190,11 +193,11 @@ usage: |-
     #   encrypted: null # (Optional) Encrypt the root volume. Default: null.
     #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Default: null.
     #   delete_on_termination: null # (Optional) Delete the root volume when the instance is terminated. Default: null.
-    #   tags: {} # (Optional) Additional tags for the root volume. Default: {}.
+    #   tags: {} # (Optional) Additional tags for the root volume, merged over the computed volume tags. Only applied when instance.volume_tags.enabled=false. Default: {}.
 
     # ebs:
     #   ebs_optimized: null # (Optional) Enable EBS optimization when supported by the instance type. Default: null.
-    #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Default: [].
+    #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. Default: [].
 
     # ephemeral_block_device: [] # (Optional) Ephemeral devices. Each item supports device_name and optional virtual_name and no_device. Default: [].
 
@@ -308,6 +311,9 @@ examples: |-
      - Keep `iam.create = true`, `iam.ssm_enabled = true`, and `instance.cloudwatch_agent.attach_managed_policies = true` to attach the SSM and CloudWatch agent managed policies automatically without duplicating `AmazonSSMManagedInstanceCore`, or provide an equivalent existing instance profile.
      - Set `instance.cloudwatch_agent.configure.enabled = true` and provide `config` or `config_json` to store a CloudWatch agent configuration in Parameter Store and start the agent with `AmazonCloudWatch-ManageAgent`.
      - Set `instance.cloudwatch_agent.workload_detection.enabled = true` to add opt-in tags for CloudWatch's tag-based workload-detection deployment. The account-level workload detection setting is managed in CloudWatch, not by this module.
+  7. **Volume tagging**
+     - By default (`instance.volume_tags.enabled = true`) every attached volume is tagged through the instance-level `volume_tags` attribute with the common module tags, `instance.volume_tags.extra_tags`, `Name` set to the instance name, and `InstanceName` set to the instance name.
+     - Set `instance.volume_tags.enabled = false` to tag each device individually instead. Per-device tags then come from `instance.root_block_device.tags` and `instance.ebs.block_device[*].tags`, merged over the same computed tag set — with additional EBS volumes defaulting to `Name = "<instance name>-<index>"`.
 
 # How to get started quickly
 quickstart: |-

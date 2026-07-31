@@ -63,12 +63,21 @@ variable "name_prefix" {
 #     private_ips: ["private-ip"] # defaults to null
 #     # Optional if create is false
 #     network_interface_id: "eni-id" # defaults to null; mutually exclusive with create_spot, security_group.create, source_dest_check, and instance.vpc networking fields
+#   extra_tags: {} # (Optional) Additional tags merged into the instance tags. Default: {}
+#   volume_tags:
+#     enabled: true | false # (Optional) Tag every attached volume through the instance-level volume_tags attribute. When false, tags are applied per block device instead. Default: true
+#     extra_tags: {} # (Optional) Additional tags merged into the computed volume tags. Default: {}
+#     # Computed volume tags are the common/extra module tags plus volume_tags.extra_tags,
+#     # Name = <instance name>, and InstanceName = <instance name>.
 #   root_block_device:
 #     volume_size: 8 # defaults to null
 #     volume_type: "gp3" # defaults to null
 #     iops: 3000 # defaults to null
 #     throughput: 125 # defaults to null
 #     encrypted: true | false # defaults to null
+#     kms_key_id: "kms-key-id" # defaults to null
+#     delete_on_termination: true | false # defaults to null
+#     tags: {} # (Optional) Root volume tags; only applied when volume_tags.enabled is false. Default: {}
 #   ebs:
 #     ebs_optimized: true | false # defaults to null
 #     block_device:
@@ -80,6 +89,7 @@ variable "name_prefix" {
 #         encrypted: true
 #         kms_key_id: "kms-key-id"
 #         delete_on_termination: true
+#         tags: {} # (Optional) Volume tags; only applied when volume_tags.enabled is false, merged over Name = "<instance name>-<index>". Default: {}
 #   ephemeral_block_device:
 #     - device_name: "/dev/sdh"
 #       virtual_name: "ephemeral0"
