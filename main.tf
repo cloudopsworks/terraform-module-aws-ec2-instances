@@ -41,6 +41,8 @@ locals {
   instance_metadata_http_put_response_hop_limit = try(local.instance_metadata_options.http_put_response_hop_limit, null)
   instance_metadata_http_tokens                 = "required"
   instance_metadata_tags                        = coalesce(try(local.instance_metadata_options.instance_metadata_tags, null), "disabled")
+  user_data_plain                               = try(var.instance.user_data_compressed, false) ? null : try(var.instance.user_data, null)
+  user_data_base64                              = try(var.instance.user_data_compressed, false) ? try(base64gzip(var.instance.user_data), base64gzip(file(var.instance.user_data_file)), null) : try(var.instance.user_data_base64, filebase64(var.instance.user_data_file), null)
 }
 
 data "aws_ami" "this" {
@@ -79,8 +81,8 @@ resource "aws_instance" "this" {
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
   hibernation                 = try(var.instance.hibernation, null)
-  user_data                   = try(var.instance.user_data, null)
-  user_data_base64            = try(var.instance.user_data_base64, null)
+  user_data                   = local.user_data_plain
+  user_data_base64            = local.user_data_base64
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
   key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)

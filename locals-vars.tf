@@ -6,9 +6,10 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
+
 module "tags" {
   source  = "cloudopsworks/tags/local"
-  version = "1.0.9"
+  version = "1.0.10"
 
   env = {
     organization_name = var.org.organization_name

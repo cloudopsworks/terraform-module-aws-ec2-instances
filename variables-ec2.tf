@@ -37,8 +37,10 @@ variable "name_prefix" {
 #         values: ["filter-value"] # (optional) if stated filter.name will be ignored
 #   type: "t2.micro" # defaults to "t2.micro"
 #   hibernation: true | false # defaults to null
-#   user_data: "user-data" # defaults to null
-#   user_data_base64: "user-data-base64" # defaults to null
+#   user_data: "user-data" # (optional) plain-text user data, gzip+base64 encoded when user_data_compressed=true, defaults to null
+#   user_data_base64: "user-data-base64" # (optional) base64-encoded user data, ignored when user_data_compressed=true, defaults to null
+#   user_data_file: "path/to/user-data.sh" # (optional) local file used when user_data/user_data_base64 are not set, defaults to null
+#   user_data_compressed: true | false # (optional) gzip+base64 encode user_data (or user_data_file) and send it as user_data_base64, defaults to false
 #   user_data_replace_on_change: true | false # defaults to null
 #   cpu_options:
 #     core_count: 1 # defaults to null

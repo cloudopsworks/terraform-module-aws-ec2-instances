@@ -106,9 +106,10 @@ instance:
   # hibernation: null # (Optional) Enable EC2 hibernation when the AMI and instance type support it. Default: null.
   # monitoring: null # (Optional) Enable detailed CloudWatch monitoring. Default: null.
   # get_password_data: null # (Optional) Retrieve Windows password data. Default: null.
-  # user_data: null # (Optional) Plain-text user data. Default: null.
-  # user_data_base64: null # (Optional) Base64-encoded user data. Default: null.
-  # user_data_file: null # (Optional) Local file path to base64-encode when using the AMI-ignore workflow. Default: null.
+  # user_data: null # (Optional) Plain-text user data. Gzip-compressed and base64-encoded when user_data_compressed=true. Default: null.
+  # user_data_base64: null # (Optional) Base64-encoded user data. Ignored when user_data_compressed=true. Default: null.
+  # user_data_file: null # (Optional) Local file path used when user_data/user_data_base64 are not set; base64-encoded (or gzip+base64 when user_data_compressed=true). Default: null.
+  # user_data_compressed: false # (Optional) Gzip-compress and base64-encode user_data (or user_data_file) and send it as user_data_base64, to fit the 16 KB EC2 user data limit. cloud-init decompresses it automatically. Default: false.
   # user_data_replace_on_change: null # (Optional) Recreate the instance when user data changes. Default: null.
   # source_dest_check: null # (Optional) Enable or disable source/destination checks. Leave commented when attaching an existing primary ENI. Default: null.
   # disable_api_termination: null # (Optional) Protect the instance from API termination. Default: null.
@@ -367,27 +368,27 @@ Available targets:
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.35 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.35 |
-| <a name="provider_tls"></a> [tls](#provider\_tls) | n/a |
+| ---- | ------- |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.66.0 |
+| <a name="provider_tls"></a> [tls](#provider\_tls) | 4.4.1 |
 
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
-| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
+| ---- | ------ | ------- |
+| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.10 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_ec2_host.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host) | resource |
 | [aws_ec2_tag.ami_ignore_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
 | [aws_ec2_tag.spot_instance_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
@@ -431,7 +432,7 @@ Available targets:
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | The IAM role to use for the EC2 Instance | `any` | `{}` | no |
 | <a name="input_instance"></a> [instance](#input\_instance) | The instance type to use for the EC2 Instance | `any` | `{}` | no |
@@ -445,7 +446,7 @@ Available targets:
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_cloudwatch_agent"></a> [cloudwatch\_agent](#output\_cloudwatch\_agent) | CloudWatch Agent SSM associations, configuration parameter, and opt-in tags. |
 | <a name="output_dedicated_host_arn"></a> [dedicated\_host\_arn](#output\_dedicated\_host\_arn) | ARN of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |
 | <a name="output_dedicated_host_id"></a> [dedicated\_host\_id](#output\_dedicated\_host\_id) | ID of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |
