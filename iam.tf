@@ -9,7 +9,7 @@
 data "aws_partition" "current" {}
 
 locals {
-  iam_role_name = "role-${local.name}"
+  iam_role_name = !var.compat_role ? "${local.name}-ec2-role" : "role-${local.name}"
   iam_ssm_managed_instance_core_policy_arn = (
     "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
   )

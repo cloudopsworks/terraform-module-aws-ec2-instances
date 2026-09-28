@@ -12,8 +12,8 @@ resource "aws_instance" "spot" {
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
   hibernation                 = try(var.instance.hibernation, null)
-  user_data                   = try(var.instance.user_data, null)
-  user_data_base64            = try(var.instance.user_data_base64, null)
+  user_data                   = local.user_data_plain
+  user_data_base64            = local.user_data_base64
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
   key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)
@@ -53,7 +53,7 @@ resource "aws_instance" "spot" {
       delete_on_termination = try(var.instance.root_block_device.delete_on_termination, null)
       encrypted             = try(var.instance.root_block_device.encrypted, null)
       iops                  = try(var.instance.root_block_device.iops, null)
-      kms_key_id            = try(var.instance.root_block_device.kms_key_id, null)
+      kms_key_id            = local.root_block_device_kms_key_id
       volume_size           = try(var.instance.root_block_device.volume_size, null)
       volume_type           = try(var.instance.root_block_device.volume_type, null)
       throughput            = try(var.instance.root_block_device.throughput, null)
@@ -67,7 +67,7 @@ resource "aws_instance" "spot" {
       device_name           = ebs_block_device.value.device_name
       encrypted             = try(ebs_block_device.value.encrypted, null)
       iops                  = try(ebs_block_device.value.iops, null)
-      kms_key_id            = try(ebs_block_device.value.kms_key_id, null)
+      kms_key_id            = local.ebs_block_device_kms_key_ids[ebs_block_device.key]
       snapshot_id           = try(ebs_block_device.value.snapshot_id, null)
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)

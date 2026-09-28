@@ -37,8 +37,10 @@ variable "name_prefix" {
 #         values: ["filter-value"] # (optional) if stated filter.name will be ignored
 #   type: "t2.micro" # defaults to "t2.micro"
 #   hibernation: true | false # defaults to null
-#   user_data: "user-data" # defaults to null
-#   user_data_base64: "user-data-base64" # defaults to null
+#   user_data: "user-data" # (optional) plain-text user data, gzip+base64 encoded when user_data_compressed=true, defaults to null
+#   user_data_base64: "user-data-base64" # (optional) base64-encoded user data, ignored when user_data_compressed=true, defaults to null
+#   user_data_file: "path/to/user-data.sh" # (optional) local file used when user_data/user_data_base64 are not set, defaults to null
+#   user_data_compressed: true | false # (optional) gzip+base64 encode user_data (or user_data_file) and send it as user_data_base64, defaults to false
 #   user_data_replace_on_change: true | false # defaults to null
 #   cpu_options:
 #     core_count: 1 # defaults to null
@@ -75,7 +77,8 @@ variable "name_prefix" {
 #     iops: 3000 # defaults to null
 #     throughput: 125 # defaults to null
 #     encrypted: true | false # defaults to null
-#     kms_key_id: "kms-key-id" # defaults to null
+#     kms_key_id: "kms-key-id" # (optional) KMS key ID or ARN, takes precedence over kms_key_alias, defaults to null
+#     kms_key_alias: "alias/ebs-key" # (optional) KMS alias name ("alias/" prefix optional), resolved to the key ARN via data source, defaults to null
 #     delete_on_termination: true | false # defaults to null
 #     tags: {} # (Optional) Root volume tags; only applied when volume_tags.enabled is false. Default: {}
 #   ebs:
@@ -87,7 +90,8 @@ variable "name_prefix" {
 #         iops: 3000
 #         throughput: 125
 #         encrypted: true
-#         kms_key_id: "kms-key-id"
+#         kms_key_id: "kms-key-id" # (optional) KMS key ID or ARN, takes precedence over kms_key_alias
+#         kms_key_alias: "alias/ebs-key" # (optional) KMS alias name ("alias/" prefix optional), resolved to the key ARN via data source
 #         delete_on_termination: true
 #         tags: {} # (Optional) Volume tags; only applied when volume_tags.enabled is false, merged over Name = "<instance name>-<index>". Default: {}
 #   ephemeral_block_device:
@@ -250,4 +254,12 @@ variable "iam" {
   description = "The IAM role to use for the EC2 Instance"
   type        = any
   default     = {}
+}
+
+# compat_role: true | false # (Optional) IAM role naming scheme. false: "<name>-ec2-role", true: legacy "role-<name>". Defaults to false.
+#   Set to true on deployments created before this option existed to keep the existing role; switching the value replaces the IAM role and instance profile.
+variable "compat_role" {
+  description = "(Optional) Use the legacy IAM role name \"role-<name>\" instead of \"<name>-ec2-role\". Set true on existing deployments to avoid replacing the IAM role and instance profile. Default: false."
+  type        = bool
+  default     = false
 }

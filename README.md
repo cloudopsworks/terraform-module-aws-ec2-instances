@@ -96,6 +96,7 @@ Generated `inputs.yaml`:
 
 # name: "" # (Optional) Exact EC2 instance name. Set this or name_prefix. Default: "".
 # name_prefix: "" # (Optional) Prefix used to derive the final instance name with the module naming convention. Default: "".
+# compat_role: false # (Optional) IAM role naming scheme. false: "<name>-ec2-role"; true: legacy "role-<name>". Set true on deployments created with module versions before v1.2.3 to keep the existing role — changing this value replaces both the IAM role and the instance profile (both use this name). Default: false.
 
 instance:
   # create: true # (Optional) Create the EC2 instance resources. Default: true.
@@ -106,9 +107,10 @@ instance:
   # hibernation: null # (Optional) Enable EC2 hibernation when the AMI and instance type support it. Default: null.
   # monitoring: null # (Optional) Enable detailed CloudWatch monitoring. Default: null.
   # get_password_data: null # (Optional) Retrieve Windows password data. Default: null.
-  # user_data: null # (Optional) Plain-text user data. Default: null.
-  # user_data_base64: null # (Optional) Base64-encoded user data. Default: null.
-  # user_data_file: null # (Optional) Local file path to base64-encode when using the AMI-ignore workflow. Default: null.
+  # user_data: null # (Optional) Plain-text user data. Gzip-compressed and base64-encoded when user_data_compressed=true. Default: null.
+  # user_data_base64: null # (Optional) Base64-encoded user data. Ignored when user_data_compressed=true. Default: null.
+  # user_data_file: null # (Optional) Local file path used when user_data/user_data_base64 are not set; base64-encoded (or gzip+base64 when user_data_compressed=true). Default: null.
+  # user_data_compressed: false # (Optional) Gzip-compress and base64-encode user_data (or user_data_file) and send it as user_data_base64, to fit the 16 KB EC2 user data limit. cloud-init decompresses it automatically. Default: false.
   # user_data_replace_on_change: null # (Optional) Recreate the instance when user data changes. Default: null.
   # source_dest_check: null # (Optional) Enable or disable source/destination checks. Leave commented when attaching an existing primary ENI. Default: null.
   # disable_api_termination: null # (Optional) Protect the instance from API termination. Default: null.
@@ -216,13 +218,14 @@ instance:
   #   iops: null # (Optional) Root volume provisioned IOPS. Default: null.
   #   throughput: null # (Optional) Root volume throughput in MiB/s. Default: null.
   #   encrypted: null # (Optional) Encrypt the root volume. Default: null.
-  #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Default: null.
+  #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Takes precedence over kms_key_alias. Default: null.
+  #   kms_key_alias: null # (Optional) KMS key alias for root volume encryption, e.g. "alias/ebs-key" or "ebs-key" (the "alias/" prefix is added when missing). Resolved to the key ARN through the aws_kms_alias data source; the alias must exist in the target account/region. Requires encrypted=true. Default: null.
   #   delete_on_termination: null # (Optional) Delete the root volume when the instance is terminated. Default: null.
   #   tags: {} # (Optional) Additional tags for the root volume, merged over the computed volume tags. Only applied when instance.volume_tags.enabled=false. Default: {}.
 
   # ebs:
   #   ebs_optimized: null # (Optional) Enable EBS optimization when supported by the instance type. Default: null.
-  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. Default: [].
+  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, kms_key_alias, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. kms_key_alias (e.g. "alias/ebs-key") is resolved to the key ARN through the aws_kms_alias data source; kms_key_id takes precedence when both are set. Default: [].
 
   # ephemeral_block_device: [] # (Optional) Ephemeral devices. Each item supports device_name and optional virtual_name and no_device. Default: [].
 
@@ -313,6 +316,7 @@ inputs = {
   instance    = try(local.local_vars.instance, {})
   timeouts    = try(local.local_vars.timeouts, {})
   iam         = try(local.local_vars.iam, {})
+  compat_role = try(local.local_vars.compat_role, false)
   extra_tags  = local.tags
 }
 ```
@@ -349,6 +353,9 @@ Common deployment patterns for this module include:
 7. **Volume tagging**
    - By default (`instance.volume_tags.enabled = true`) every attached volume is tagged through the instance-level `volume_tags` attribute with the common module tags, `instance.volume_tags.extra_tags`, `Name` set to the instance name, and `InstanceName` set to the instance name.
    - Set `instance.volume_tags.enabled = false` to tag each device individually instead. Per-device tags then come from `instance.root_block_device.tags` and `instance.ebs.block_device[*].tags`, merged over the same computed tag set — with additional EBS volumes defaulting to `Name = "<instance name>-<index>"`.
+8. **IAM role naming and upgrades**
+   - New deployments name the created IAM role `<name>-ec2-role` (`compat_role = false`, the default).
+   - Deployments created with earlier module versions used `role-<name>`. Set `compat_role: true` in `inputs.yaml` before upgrading to keep the existing role; leaving the default replaces both the IAM role and the instance profile, which share this name.
 
 
 
@@ -367,27 +374,27 @@ Available targets:
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.35 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.35 |
 | <a name="provider_tls"></a> [tls](#provider\_tls) | n/a |
 
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
-| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
+| ---- | ------ | ------- |
+| <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.10 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_ec2_host.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_host) | resource |
 | [aws_ec2_tag.ami_ignore_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
 | [aws_ec2_tag.spot_instance_eni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ec2_tag) | resource |
@@ -423,6 +430,7 @@ Available targets:
 | [aws_iam_policy_document.assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.cloudwatch_agent_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_kms_alias.volume](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_alias) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_security_group.source](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/security_group) | data source |
@@ -431,7 +439,8 @@ Available targets:
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_compat_role"></a> [compat\_role](#input\_compat\_role) | (Optional) Use the legacy IAM role name "role-<name>" instead of "<name>-ec2-role". Set true on existing deployments to avoid replacing the IAM role and instance profile. Default: false. | `bool` | `false` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | The IAM role to use for the EC2 Instance | `any` | `{}` | no |
 | <a name="input_instance"></a> [instance](#input\_instance) | The instance type to use for the EC2 Instance | `any` | `{}` | no |
@@ -445,7 +454,7 @@ Available targets:
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_cloudwatch_agent"></a> [cloudwatch\_agent](#output\_cloudwatch\_agent) | CloudWatch Agent SSM associations, configuration parameter, and opt-in tags. |
 | <a name="output_dedicated_host_arn"></a> [dedicated\_host\_arn](#output\_dedicated\_host\_arn) | ARN of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |
 | <a name="output_dedicated_host_id"></a> [dedicated\_host\_id](#output\_dedicated\_host\_id) | ID of the dedicated EC2 host when instance.dedicated\_host.enabled is true. |

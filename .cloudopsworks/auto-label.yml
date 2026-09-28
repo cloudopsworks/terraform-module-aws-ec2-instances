@@ -7,19 +7,19 @@
 #     Distributed Under Apache v2.0 License
 #
 release:
-  - base-branch: [ 'main', 'master' ]
+  - base-branch: ['main', 'master']
 
 feature:
-  - head-branch: [ '^feature' ]
+  - head-branch: ['^feature']
 
 hotfix:
-  - head-branch: [ '^hotfix', '^fix' ]
+  - head-branch: ['^hotfix', '^fix']
 
 size-XS:
-  - any: [ '.cloudopsworks/_VERSION' ]
+  - any: ['.cloudopsworks/_VERSION']
 
 size-S:
-  - any: [ '.cloudopsworks/**/*', '.github/workflows/*' ]
+  - any: ['.cloudopsworks/**/*', '.github/workflows/*']
 
 size-XL:
-  - any: [ '**/*.tf', '!.cloudopsworks/**/*', '!.github/workflows/*', '!charts/**/*' ]
+  - any: ['**/*.tf', '!.cloudopsworks/**/*', '!.github/workflows/*', '!charts/**/*']

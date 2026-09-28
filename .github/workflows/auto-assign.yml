@@ -25,9 +25,10 @@ permissions:
 
 jobs:
   assignments:
+    name: Assign Pull Request
     runs-on: ubuntu-latest
     steps:
       - uses: cloudopsworks/auto-assign@v3.0.2
         with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          repo-token: ${{ secrets.BOT_TOKEN }}
           configuration-path: '.cloudopsworks/auto-assign.yml'

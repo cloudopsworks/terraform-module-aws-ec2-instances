@@ -41,6 +41,27 @@ locals {
   instance_metadata_http_put_response_hop_limit = try(local.instance_metadata_options.http_put_response_hop_limit, null)
   instance_metadata_http_tokens                 = "required"
   instance_metadata_tags                        = coalesce(try(local.instance_metadata_options.instance_metadata_tags, null), "disabled")
+  user_data_plain                               = try(var.instance.user_data_compressed, false) ? null : try(var.instance.user_data, null)
+  user_data_base64                              = try(var.instance.user_data_compressed, false) ? try(base64gzip(var.instance.user_data), base64gzip(file(var.instance.user_data_file)), null) : try(var.instance.user_data_base64, filebase64(var.instance.user_data_file), null)
+  # kms_key_id takes precedence over kms_key_alias; an alias is only looked up when no kms_key_id is set.
+  root_block_device_kms_key_alias = try(var.instance.root_block_device.kms_key_id, null) != null ? null : try(
+    startswith(var.instance.root_block_device.kms_key_alias, "alias/") ? var.instance.root_block_device.kms_key_alias : "alias/${var.instance.root_block_device.kms_key_alias}", null
+  )
+  ebs_block_device_kms_key_aliases = [
+    for block_device in try(var.instance.ebs.block_device, []) : try(block_device.kms_key_id, null) != null ? null : try(
+      startswith(block_device.kms_key_alias, "alias/") ? block_device.kms_key_alias : "alias/${block_device.kms_key_alias}", null
+    )
+  ]
+  volume_kms_key_aliases       = toset(compact(concat([local.root_block_device_kms_key_alias], local.ebs_block_device_kms_key_aliases)))
+  root_block_device_kms_key_id = try(coalesce(try(var.instance.root_block_device.kms_key_id, null), try(data.aws_kms_alias.volume[local.root_block_device_kms_key_alias].target_key_arn, null)), null)
+  ebs_block_device_kms_key_ids = [
+    for idx, block_device in try(var.instance.ebs.block_device, []) : try(coalesce(try(block_device.kms_key_id, null), try(data.aws_kms_alias.volume[local.ebs_block_device_kms_key_aliases[idx]].target_key_arn, null)), null)
+  ]
+}
+
+data "aws_kms_alias" "volume" {
+  for_each = try(var.instance.create, true) ? local.volume_kms_key_aliases : toset([])
+  name     = each.value
 }
 
 data "aws_ami" "this" {
@@ -79,8 +100,8 @@ resource "aws_instance" "this" {
   ami                         = try(data.aws_ami.this[0].id, var.instance.ami.id, null)
   instance_type               = var.instance.type
   hibernation                 = try(var.instance.hibernation, null)
-  user_data                   = try(var.instance.user_data, null)
-  user_data_base64            = try(var.instance.user_data_base64, null)
+  user_data                   = local.user_data_plain
+  user_data_base64            = local.user_data_base64
   user_data_replace_on_change = try(var.instance.user_data_replace_on_change, null)
   key_name                    = try(var.instance.key_pair.create, false) ? aws_key_pair.this[0].key_name : try(var.instance.key_pair.name, null)
   monitoring                  = try(var.instance.monitoring, null)
@@ -109,7 +130,7 @@ resource "aws_instance" "this" {
       delete_on_termination = try(var.instance.root_block_device.delete_on_termination, null)
       encrypted             = try(var.instance.root_block_device.encrypted, null)
       iops                  = try(var.instance.root_block_device.iops, null)
-      kms_key_id            = try(var.instance.root_block_device.kms_key_id, null)
+      kms_key_id            = local.root_block_device_kms_key_id
       volume_size           = try(var.instance.root_block_device.volume_size, null)
       volume_type           = try(var.instance.root_block_device.volume_type, null)
       throughput            = try(var.instance.root_block_device.throughput, null)
@@ -123,7 +144,7 @@ resource "aws_instance" "this" {
       device_name           = ebs_block_device.value.device_name
       encrypted             = try(ebs_block_device.value.encrypted, null)
       iops                  = try(ebs_block_device.value.iops, null)
-      kms_key_id            = try(ebs_block_device.value.kms_key_id, null)
+      kms_key_id            = local.ebs_block_device_kms_key_ids[ebs_block_device.key]
       snapshot_id           = try(ebs_block_device.value.snapshot_id, null)
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
