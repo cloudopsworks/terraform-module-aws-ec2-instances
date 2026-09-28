@@ -1,0 +1,13 @@
+{{- template "copyright" . }}
+
+module "tags" {
+  source  = "cloudopsworks/tags/local"
+  version = "1.0.10"
+
+  env = {
+    organization_name = var.org.organization_name
+    org_unit_name     = var.org.organization_unit
+    environment_name  = var.org.environment_name
+    environment_type  = var.org.environment_type
+  }
+}

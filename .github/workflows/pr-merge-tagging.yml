@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   push_tag:
+    name: Push Release Tag
     if: ${{ github.event.pull_request.merged == true && ( github.base_ref == 'master' || github.base_ref == 'main' || startsWith(github.base_ref,'support/') ) }}
     runs-on: ubuntu-latest
     steps:
@@ -41,13 +42,16 @@ jobs:
         id: tagged
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BOT_USER: ${{ vars.BOT_USER }}
+          BOT_EMAIL: ${{ vars.BOT_EMAIL }}
         run: |
-          git config --global user.name "${{ vars.BOT_USER }}"
-          git config --global user.email "${{ vars.BOT_EMAIL }}"
+          git config --global user.name "${BOT_USER}"
+          git config --global user.email "${BOT_EMAIL}"
           make gitflow/version/tag
           make gitflow/version/publish
 
   branch_deletion:
+    name: Delete Branch
     if: (! failure())
     needs:
       - push_tag
@@ -71,6 +75,8 @@ jobs:
 
       - name: Delete local & remote Feature
         if: ${{ github.event.pull_request.merged == true && startsWith(github.head_ref, 'feature/') }}
+        env:
+          FEATURE_REF: ${{ github.head_ref }}
         run: |
-          FEATURE=$(echo "${{ github.head_ref }}" | sed -e 's/feature\///g')
+          FEATURE=$(echo "$FEATURE_REF" | sed -e 's/feature\///g')
           make gitflow/feature/purge:$FEATURE
