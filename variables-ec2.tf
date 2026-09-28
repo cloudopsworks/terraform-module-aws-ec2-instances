@@ -255,3 +255,9 @@ variable "iam" {
   type        = any
   default     = {}
 }
+
+variable "compat_role" {
+  description = "Whether to use the legacy IAM role creation logic for backwards compatibility, Legacy: role-<name>, New: <name>-ec2-role. Defaults to false."
+  type        = bool
+  default     = false
+}
