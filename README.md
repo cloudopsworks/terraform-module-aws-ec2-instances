@@ -96,6 +96,7 @@ Generated `inputs.yaml`:
 
 # name: "" # (Optional) Exact EC2 instance name. Set this or name_prefix. Default: "".
 # name_prefix: "" # (Optional) Prefix used to derive the final instance name with the module naming convention. Default: "".
+# compat_role: false # (Optional) IAM role naming scheme. false: "<name>-ec2-role"; true: legacy "role-<name>". Set true on deployments created with module versions before v1.2.3 to keep the existing role — changing this value replaces both the IAM role and the instance profile (both use this name). Default: false.
 
 instance:
   # create: true # (Optional) Create the EC2 instance resources. Default: true.
@@ -315,6 +316,7 @@ inputs = {
   instance    = try(local.local_vars.instance, {})
   timeouts    = try(local.local_vars.timeouts, {})
   iam         = try(local.local_vars.iam, {})
+  compat_role = try(local.local_vars.compat_role, false)
   extra_tags  = local.tags
 }
 ```
@@ -351,6 +353,9 @@ Common deployment patterns for this module include:
 7. **Volume tagging**
    - By default (`instance.volume_tags.enabled = true`) every attached volume is tagged through the instance-level `volume_tags` attribute with the common module tags, `instance.volume_tags.extra_tags`, `Name` set to the instance name, and `InstanceName` set to the instance name.
    - Set `instance.volume_tags.enabled = false` to tag each device individually instead. Per-device tags then come from `instance.root_block_device.tags` and `instance.ebs.block_device[*].tags`, merged over the same computed tag set — with additional EBS volumes defaulting to `Name = "<instance name>-<index>"`.
+8. **IAM role naming and upgrades**
+   - New deployments name the created IAM role `<name>-ec2-role` (`compat_role = false`, the default).
+   - Deployments created with earlier module versions used `role-<name>`. Set `compat_role: true` in `inputs.yaml` before upgrading to keep the existing role; leaving the default replaces both the IAM role and the instance profile, which share this name.
 
 
 
@@ -435,6 +440,7 @@ Available targets:
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_compat_role"></a> [compat\_role](#input\_compat\_role) | (Optional) Use the legacy IAM role name "role-<name>" instead of "<name>-ec2-role". Set true on existing deployments to avoid replacing the IAM role and instance profile. Default: false. | `bool` | `false` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | The IAM role to use for the EC2 Instance | `any` | `{}` | no |
 | <a name="input_instance"></a> [instance](#input\_instance) | The instance type to use for the EC2 Instance | `any` | `{}` | no |

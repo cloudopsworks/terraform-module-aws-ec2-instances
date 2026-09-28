@@ -256,8 +256,10 @@ variable "iam" {
   default     = {}
 }
 
+# compat_role: true | false # (Optional) IAM role naming scheme. false: "<name>-ec2-role", true: legacy "role-<name>". Defaults to false.
+#   Set to true on deployments created before this option existed to keep the existing role; switching the value replaces the IAM role and instance profile.
 variable "compat_role" {
-  description = "Whether to use the legacy IAM role creation logic for backwards compatibility, Legacy: role-<name>, New: <name>-ec2-role. Defaults to false."
+  description = "(Optional) Use the legacy IAM role name \"role-<name>\" instead of \"<name>-ec2-role\". Set true on existing deployments to avoid replacing the IAM role and instance profile. Default: false."
   type        = bool
   default     = false
 }

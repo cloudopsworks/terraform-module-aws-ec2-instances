@@ -4,6 +4,7 @@
 
 # name: "" # (Optional) Exact EC2 instance name. Set this or name_prefix. Default: "".
 # name_prefix: "" # (Optional) Prefix used to derive the final instance name with the module naming convention. Default: "".
+# compat_role: false # (Optional) IAM role naming scheme. false: "<name>-ec2-role"; true: legacy "role-<name>". Set true on deployments created with module versions before v1.2.3 to keep the existing role — changing this value replaces both the IAM role and the instance profile (both use this name). Default: false.
 
 instance:
   # create: true # (Optional) Create the EC2 instance resources. Default: true.

@@ -67,6 +67,7 @@
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
+| <a name="input_compat_role"></a> [compat\_role](#input\_compat\_role) | (Optional) Use the legacy IAM role name "role-<name>" instead of "<name>-ec2-role". Set true on existing deployments to avoid replacing the IAM role and instance profile. Default: false. | `bool` | `false` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | The IAM role to use for the EC2 Instance | `any` | `{}` | no |
 | <a name="input_instance"></a> [instance](#input\_instance) | The instance type to use for the EC2 Instance | `any` | `{}` | no |
