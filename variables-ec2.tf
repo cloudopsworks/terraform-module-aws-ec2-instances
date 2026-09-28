@@ -77,7 +77,8 @@ variable "name_prefix" {
 #     iops: 3000 # defaults to null
 #     throughput: 125 # defaults to null
 #     encrypted: true | false # defaults to null
-#     kms_key_id: "kms-key-id" # defaults to null
+#     kms_key_id: "kms-key-id" # (optional) KMS key ID or ARN, takes precedence over kms_key_alias, defaults to null
+#     kms_key_alias: "alias/ebs-key" # (optional) KMS alias name ("alias/" prefix optional), resolved to the key ARN via data source, defaults to null
 #     delete_on_termination: true | false # defaults to null
 #     tags: {} # (Optional) Root volume tags; only applied when volume_tags.enabled is false. Default: {}
 #   ebs:
@@ -89,7 +90,8 @@ variable "name_prefix" {
 #         iops: 3000
 #         throughput: 125
 #         encrypted: true
-#         kms_key_id: "kms-key-id"
+#         kms_key_id: "kms-key-id" # (optional) KMS key ID or ARN, takes precedence over kms_key_alias
+#         kms_key_alias: "alias/ebs-key" # (optional) KMS alias name ("alias/" prefix optional), resolved to the key ARN via data source
 #         delete_on_termination: true
 #         tags: {} # (Optional) Volume tags; only applied when volume_tags.enabled is false, merged over Name = "<instance name>-<index>". Default: {}
 #   ephemeral_block_device:

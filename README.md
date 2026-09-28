@@ -217,13 +217,14 @@ instance:
   #   iops: null # (Optional) Root volume provisioned IOPS. Default: null.
   #   throughput: null # (Optional) Root volume throughput in MiB/s. Default: null.
   #   encrypted: null # (Optional) Encrypt the root volume. Default: null.
-  #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Default: null.
+  #   kms_key_id: null # (Optional) KMS key ID or ARN for root volume encryption. Takes precedence over kms_key_alias. Default: null.
+  #   kms_key_alias: null # (Optional) KMS key alias for root volume encryption, e.g. "alias/ebs-key" or "ebs-key" (the "alias/" prefix is added when missing). Resolved to the key ARN through the aws_kms_alias data source; the alias must exist in the target account/region. Requires encrypted=true. Default: null.
   #   delete_on_termination: null # (Optional) Delete the root volume when the instance is terminated. Default: null.
   #   tags: {} # (Optional) Additional tags for the root volume, merged over the computed volume tags. Only applied when instance.volume_tags.enabled=false. Default: {}.
 
   # ebs:
   #   ebs_optimized: null # (Optional) Enable EBS optimization when supported by the instance type. Default: null.
-  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. Default: [].
+  #   block_device: [] # (Optional) Additional EBS volumes. Each item supports device_name and optional delete_on_termination, encrypted, iops, kms_key_id, kms_key_alias, snapshot_id, volume_size, volume_type, throughput, and tags. Per-device tags are merged over the computed volume tags plus Name: "<instance name>-<index>" and are only applied when instance.volume_tags.enabled=false. kms_key_alias (e.g. "alias/ebs-key") is resolved to the key ARN through the aws_kms_alias data source; kms_key_id takes precedence when both are set. Default: [].
 
   # ephemeral_block_device: [] # (Optional) Ephemeral devices. Each item supports device_name and optional virtual_name and no_device. Default: [].
 
@@ -424,6 +425,7 @@ Available targets:
 | [aws_iam_policy_document.assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.cloudwatch_agent_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_kms_alias.volume](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_alias) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_security_group.source](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/security_group) | data source |

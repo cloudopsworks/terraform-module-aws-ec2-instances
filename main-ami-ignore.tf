@@ -42,7 +42,7 @@ resource "aws_instance" "ami_ignore" {
       delete_on_termination = try(var.instance.root_block_device.delete_on_termination, null)
       encrypted             = try(var.instance.root_block_device.encrypted, null)
       iops                  = try(var.instance.root_block_device.iops, null)
-      kms_key_id            = try(var.instance.root_block_device.kms_key_id, null)
+      kms_key_id            = local.root_block_device_kms_key_id
       volume_size           = try(var.instance.root_block_device.volume_size, null)
       volume_type           = try(var.instance.root_block_device.volume_type, null)
       throughput            = try(var.instance.root_block_device.throughput, null)
@@ -56,7 +56,7 @@ resource "aws_instance" "ami_ignore" {
       device_name           = ebs_block_device.value.device_name
       encrypted             = try(ebs_block_device.value.encrypted, null)
       iops                  = try(ebs_block_device.value.iops, null)
-      kms_key_id            = try(ebs_block_device.value.kms_key_id, null)
+      kms_key_id            = local.ebs_block_device_kms_key_ids[ebs_block_device.key]
       snapshot_id           = try(ebs_block_device.value.snapshot_id, null)
       volume_size           = try(ebs_block_device.value.volume_size, null)
       volume_type           = try(ebs_block_device.value.volume_type, null)
